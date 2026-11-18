@@ -62,17 +62,17 @@
   function place() {
     if (!open) return;
     const r = open.anchor.getBoundingClientRect();
-    const w = Math.max(r.width, 180);
+    const w = r.width;
     pop.style.width = w + 'px';
     const below = innerHeight - r.bottom - 12, above = r.top - 12;
     const list = pop.firstElementChild;
     const h = Math.min(list.scrollHeight + 12, 340);
     const up = below < Math.min(h, 220) && above > below;
     list.style.maxHeight = (Math.max(120, Math.min(340, up ? above : below)) - 12) + 'px';
-    let left = Math.min(r.left, innerWidth - pop.offsetWidth - 8); left = Math.max(8, left);
+    const left = r.left;
     pop.style.left = left + 'px';
-    pop.style.top = up ? (r.top - Math.min(pop.offsetHeight, above) - 12) + 'px' : (r.bottom + 12) + 'px';
-    pop.classList.toggle('up', up);
+    pop.style.top = up ? (r.top - pop.offsetHeight + 2) + 'px' : (r.bottom - 2) + 'px';
+    pop.classList.toggle('up', up); open.anchor.classList.toggle('dd-up', up);
     const br = open.btn.getBoundingClientRect();
     pop.style.setProperty('--cx', Math.min(w - 24, Math.max(18, br.right - 18 - left)) + 'px');
   }
@@ -99,7 +99,7 @@
 
   function close(refocus) {
     if (!open) return;
-    const b = open.btn; open.anchor.classList.remove('dd-anchor'); open = null;
+    const b = open.btn; open.anchor.classList.remove('dd-anchor', 'dd-up'); open = null;
     pop.hidden = true; pop.innerHTML = '';
     b.setAttribute('aria-expanded', 'false'); b.classList.remove('open');
     if (refocus) b.focus({ preventScroll: true });

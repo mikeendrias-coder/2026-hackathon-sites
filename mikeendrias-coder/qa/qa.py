@@ -1,5 +1,4 @@
-"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment, clipped text, overlaps, target size, text size, broken images,
-reflow, keyboard focus, console errors, no browser-native controls, content visible with motion paused, dropdowns attached to their box."""
+"""Face Value QA suite. See README.md."""
 import asyncio, json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 URL = os.environ.get('FV_URL', 'http://localhost:8765/index.html')
@@ -124,8 +123,8 @@ async def motion_and_dropdown(b):
   for k in range(5):
     btns = await pg.query_selector_all('.fbar .dd-btn'); await btns[k].click(); await pg.wait_for_timeout(250)
     d = await pg.evaluate("""() => { const p = document.querySelector('.dd-pop'); const a = document.querySelector('.dd-anchor'); if (!p || p.hidden || !a) return 'no popup'; const pr = p.getBoundingClientRect(), ar = a.getBoundingClientRect();
-      return { dl: +(pr.left - ar.left).toFixed(1), dw: +(pr.width - Math.max(ar.width, 180)).toFixed(1), gap: +(pr.top - ar.bottom).toFixed(1) }; }""")
-    if d == 'no popup' or abs(d['dl']) > 1.5 or abs(d['dw']) > 1.5 or not (6 <= d['gap'] <= 16): bad.append(f'dropdown {k} not attached to its box: {d}')
+      return { dl: +(pr.left - ar.left).toFixed(1), dw: +(pr.width - ar.width).toFixed(1), gap: +(pr.top - ar.bottom).toFixed(1) }; }""")
+    if d == 'no popup' or abs(d['dl']) > 0.6 or abs(d['dw']) > 0.6 or not (-3 <= d['gap'] <= 0.5): bad.append(f'dropdown {k} not continuous with its box: {d}')
     await pg.keyboard.press('Escape'); await pg.wait_for_timeout(150)
   await ctx.close()
   return bad
