@@ -209,14 +209,23 @@ let lastFocus = null;
 function openDrawer(kicker, title, html, icon) {
   lastFocus = document.activeElement;
   $('d-kicker').textContent = kicker; $('d-title').innerHTML = (icon ? img(icon, 34) : '') + title; $('d-body').innerHTML = html; $('d-body').scrollTop = 0;
-  $('drawer').classList.add('on'); $('scrim').classList.add('on');
+  $('drawer').inert = false; $('drawer').classList.add('on'); $('scrim').classList.add('on'); $('app').inert = true;
   setTimeout(() => $('d-close').focus(), 60);
 }
 function closeDrawer() {
-  $('drawer').classList.remove('on'); $('scrim').classList.remove('on');
+  $('drawer').classList.remove('on'); $('scrim').classList.remove('on'); $('drawer').inert = true; $('app').inert = false;
   if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
 }
 $('d-close').onclick = closeDrawer; $('scrim').onclick = closeDrawer;
+function trap(e, box) {
+  const f = [...box.querySelectorAll('a[href],button:not([disabled]),select,input,[tabindex="0"]')].filter(x => x.offsetParent !== null);
+  if (!f.length) return; const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab') { if ($('drawer').classList.contains('on')) trap(e, $('drawer')); else if ($('welcome').classList.contains('on')) trap(e, $('welcome')); }
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if ($('drawer').classList.contains('on')) closeDrawer(); else if ($('welcome').classList.contains('on')) closeWelcome(); }
 });
@@ -227,7 +236,7 @@ const hilite = (text, q) => {
   const words = q.split(/\s+/).filter(w => w.length > 1).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return words.length ? t.replace(new RegExp(`(${words.join('|')})`, 'gi'), '<mark>$1</mark>') : t;
 };
-const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}">Copy</button></div>“${hilite(unq(q.text), hl)}”</blockquote>`;
+const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>“${hilite(unq(q.text), hl)}”</blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
 const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pchip${limits[r] ? ' lim' : ''}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${esc(PROT[r].short)}${limits[r] ? ' (limited)' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pchip none">None of the 7</span></div>';
@@ -322,18 +331,18 @@ document.addEventListener('click', e => {
   else if (t.dataset.preset) { closeDrawer(); loadPreset(+t.dataset.preset); }
   else if (t.dataset.open === 'stories') storiesDrawer();
   else if (t.dataset.open === 'about') aboutDrawer();
-  else if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => { t.textContent = 'Copied'; setTimeout(() => t.textContent = 'Copy', 1400); }).catch(() => {}); }
+  else if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => { t.textContent = 'Copied'; t.setAttribute('aria-live', 'polite'); setTimeout(() => t.textContent = 'Copy', 1400); }).catch(() => {}); }
   else if (t.dataset.goto) { closeDrawer(); if (t.dataset.st) setState(t.dataset.st, false); setTab(t.dataset.goto); }
 });
 $('open-about').onclick = aboutDrawer;
 document.addEventListener('keydown', e => { const t = e.target.closest && e.target.closest('span[role=button]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); } });
 
 /* ================= hover pop-outs (in-page, not browser tooltips) ================= */
-const tip = document.createElement('div'); tip.className = 'tip'; tip.setAttribute('role', 'tooltip'); tip.id = 'tip'; document.body.appendChild(tip);
+const tip = document.createElement('div'); tip.className = 'tip'; tip.id = 'tip'; tip.setAttribute('aria-hidden', 'true'); document.body.appendChild(tip);
 let tipFor = null;
 function showTip(el) {
   const text = el.dataset.tip; if (!text) return;
-  tipFor = el; tip.textContent = text; tip.classList.add('on'); el.setAttribute('aria-describedby', 'tip');
+  tipFor = el; tip.textContent = text; tip.setAttribute('role', 'tooltip'); tip.removeAttribute('aria-hidden'); tip.classList.add('on'); el.setAttribute('aria-describedby', 'tip');
   const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
   let x = r.left + r.width / 2 - tw / 2, y = r.top - th - 10, below = false;
   if (y < 8) { y = r.bottom + 10; below = true; }
@@ -341,7 +350,7 @@ function showTip(el) {
   tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.classList.toggle('below', below);
   tip.style.setProperty('--ax', (r.left + r.width / 2 - x) + 'px');
 }
-function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tipFor = null; tip.classList.remove('on'); }
+function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tipFor = null; tip.classList.remove('on'); tip.removeAttribute('role'); tip.setAttribute('aria-hidden', 'true'); }
 const canHover = matchMedia('(hover: hover)').matches;
 document.addEventListener('mouseover', e => { if (!canHover) return; const el = e.target.closest('[data-tip]'); if (el && el !== tipFor) showTip(el); else if (!el && tipFor) hideTip(); });
 document.addEventListener('focusin', e => { const el = e.target.closest('[data-tip]'); if (el && e.target.matches(':focus-visible')) showTip(el); });
@@ -353,7 +362,7 @@ $('open-stories').onclick = storiesDrawer;
 /* ================= tabs ================= */
 function setTab(tab) {
   S.tab = tab;
-  document.querySelectorAll('[role=tab][data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  document.querySelectorAll('[role=tab][data-tab]').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === tab); b.tabIndex = b.dataset.tab === tab ? 0 : -1; });
   ['state', 'case', 'compare', 'laws'].forEach(v => $('v-' + v).classList.toggle('on', v === tab));
   $('app').classList.toggle('wide', tab === 'compare' || tab === 'laws');
   if (tab === 'compare') renderCompare();
@@ -362,6 +371,18 @@ function setTab(tab) {
   saveHash();
 }
 document.querySelectorAll('[role=tab][data-tab]').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+const TABS = ['state', 'case', 'compare', 'laws'];
+document.querySelectorAll('[role=tablist]').forEach(list => list.addEventListener('keydown', e => {
+  const t = e.target.closest('[role=tab][data-tab]'); if (!t) return;
+  let i = TABS.indexOf(t.dataset.tab);
+  if (e.key === 'ArrowRight') i = (i + 1) % 4; else if (e.key === 'ArrowLeft') i = (i + 3) % 4; else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = 3; else return;
+  e.preventDefault(); setTab(TABS[i]); list.querySelector(`[data-tab="${TABS[i]}"]`).focus();
+}));
+/* motion switch: pauses every animation on the page */
+let still = false; try { still = localStorage.getItem('fv-still') === '1'; } catch (e) {}
+if (reduced) still = true;
+function setMotion(v) { still = v; document.body.classList.toggle('still', v); $('motion').setAttribute('aria-pressed', v); $('motion-t').textContent = v ? 'Play motion' : 'Pause motion'; $('motion-sr').textContent = v ? 'Animation is paused' : 'Pause all animation'; try { localStorage.setItem('fv-still', v ? '1' : '0'); } catch (e) {} }
+$('motion').onclick = () => setMotion(!still); setMotion(still);
 
 /* ================= state picking ================= */
 const stateOpts = sel => D.states.map(s => `<option${s.name === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
@@ -370,7 +391,7 @@ D.states.forEach(s => {
   const ab = ABBR[s.name], p = POS[ab];
   const b = document.createElement('button');
   b.className = 'tile ' + mapLevel(s.name); b.textContent = ab; b.dataset.state = s.name; b.dataset.tip = groupOf(s.name) === 'none' ? `${s.name}: no face recognition law` : groupOf(s.name) === 'zero' ? `${s.name}: a law, but none of the 7 protections` : `${s.name}: ${protCount(s.name)} of 7 protections`;
-  b.setAttribute('aria-label', s.name); b.style.gridColumn = p[0] + 1; b.style.gridRow = p[1] + 1;
+  b.setAttribute('aria-label', `${ab}, ${b.dataset.tip}`); b.style.gridColumn = p[0] + 1; b.style.gridRow = p[1] + 1;
   tiles.appendChild(b);
 });
 $('mlegend').outerHTML = legendHTML(false);
@@ -380,7 +401,7 @@ document.querySelectorAll('[data-statepick]').forEach(s => s.onchange = e => set
 
 function setState(name, rerender = true) {
   S.state = name; S.whatif = 'none';
-  tiles.querySelectorAll('.tile').forEach(t => { const on = t.dataset.state === name; t.classList.toggle('sel', on); const p = t.querySelector('.pin'); if (on && !p) t.insertAdjacentHTML('beforeend', img('pin', 22, 'pin')); if (!on && p) p.remove(); });
+  tiles.querySelectorAll('.tile').forEach(t => { const on = t.dataset.state === name; t.classList.toggle('sel', on); t.setAttribute('aria-pressed', on); const p = t.querySelector('.pin'); if (on && !p) t.insertAdjacentHTML('beforeend', img('pin', 22, 'pin')); if (!on && p) p.remove(); });
   $('state-pick').innerHTML = stateOpts(name);
   document.querySelectorAll('[data-statepick]').forEach(s => s.innerHTML = stateOpts(name));
   renderState(); restartCase(rerender && S.tab === 'case');
@@ -411,9 +432,9 @@ function renderState() {
     const w = LV[sp.level];
     const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : ''; })() : '';
     const nb = billsFor(st, r).filter(b => b.pending).length;
-    return `<button class="prot" data-prot="${r}">${img(PICON[r], 38)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
-      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} alive` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 32)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
-  }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 38)}<span><b>Bills in ${esc(st)}</b>
+    return `<button class="prot" data-prot="${r}">${img(PICON[r], 44)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
+      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} alive` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
+  }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 44)}<span><b>Bills in ${esc(st)}</b>
       <span class="st">${billsHere.length ? `${billsHere.length} recorded${alive.length ? `, ${alive.length} still alive` : ', none still alive'}` : 'None recorded'}</span></span><span class="end">${alive.length ? img('gate-would', 30) : ''}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   const other = lawsHere.filter(l => !l.rules.length);
   $('s-foot').innerHTML = `
@@ -441,7 +462,7 @@ function restartCase(animate) {
 }
 function buildTrack() {
   $('track').innerHTML = `<div class="road"></div><div class="done" id="done"></div>` +
-    STEPS.map((s, i) => `<button class="station" data-i="${i}" style="left:${stepX(i)}%" aria-label="Step ${i + 1}: ${esc(s.short)}" data-tip="Step ${i + 1}: ${esc(s.title)}">${img(s.icon, 30)}<span class="gate"></span><span class="lbl">${esc(s.short)}</span></button>`).join('') +
+    STEPS.map((s, i) => `<button class="station" data-i="${i}" style="left:${stepX(i)}%" aria-label="Step ${i + 1}: ${esc(s.short)}" data-tip="Step ${i + 1}: ${esc(s.title)}">${img(s.icon, 34)}<span class="gate"></span><span class="lbl">${esc(s.short)}</span></button>`).join('') +
     `<div class="walker" id="walker" style="left:${stepX(0)}%">${img('who-' + S.who, 44)}${img('src-' + S.src, 24, 'small')}<span class="bubble" id="bubble"></span></div>`;
   $('track').onclick = e => { const b = e.target.closest('.station'); if (b) go(+b.dataset.i, true); };
 }
@@ -479,11 +500,11 @@ function resultRow(r, step) {
   const sh = SHOW[kind];
   const name = r.rule === '4' ? (r.at === 'lineup' ? 'Lineups' : "A match isn't enough") : PROT[r.rule].short;
   const src = r.bill ? `${billRef(r.bill)}` : r.top ? lawRef(r.top.law) : r.mhits ? lawRef(r.mhits[0].law) : `data-prot="${r.rule}"`;
-  return `<div class="res">${img(sh.sh, 34)}<div><div class="rt">${esc(name)}<span class="tagline ${sh.tag}">${esc(sh.word)}</span></div><div class="rs">${esc(sentence(r, step))}</div></div>
-    <button class="copy" ${src}>${r.status === 'gap' ? 'Fixes' : r.bill ? 'Read bill' : 'Read law'}</button></div>`;
+  return `<div class="res">${img(sh.sh, 40)}<div><div class="rt">${esc(name)}<span class="tagline ${sh.tag}">${esc(sh.word)}</span></div><div class="rs">${esc(sentence(r, step))}</div></div>
+    <button class="copy" ${src} aria-label="${r.status === 'gap' ? 'Fixes' : r.bill ? 'Read bill' : 'Read law'}: ${esc(name)}">${r.status === 'gap' ? 'Fixes' : r.bill ? 'Read bill' : 'Read law'}</button></div>`;
 }
 function otherRow(l) {
-  return `<div class="res">${img('law', 34)}<div><div class="rt">${esc(l.name)}<span class="tagline t-part">Other ${esc(l.state)} law</span></div><div class="rs">${esc(l.does)}</div></div><button class="copy" ${lawRef(l)}>Read law</button></div>`;
+  return `<div class="res">${img('law', 34)}<div><div class="rt">${esc(l.name)}<span class="tagline t-part">Other ${esc(l.state)} law</span></div><div class="rs">${esc(l.does)}</div></div><button class="copy" ${lawRef(l)} aria-label="Read law: ${esc(l.name)}">Read law</button></div>`;
 }
 function verdictHTML() {
   const st = S.state, all = CASE.steps.flatMap(s => s.agg === 'skip' ? [] : s.results);
@@ -538,7 +559,7 @@ function go(i, animate) {
     b.classList.toggle('skip', sj.agg === 'skip' && j <= i);
     b.querySelector('.gate').innerHTML = SHOW[sj.agg] ? img(SHOW[sj.agg].gate, 26) : '';
   });
-  $('stephead').innerHTML = `${img(s.icon, 48)}<div><div class="stepno">STEP ${i + 1} OF ${STEPS.length}</div><div class="stitle">${esc(s.title)}</div></div>`;
+  $('stephead').innerHTML = `${img(s.icon, 56)}<div><div class="stepno">STEP ${i + 1} OF ${STEPS.length}</div><div class="stitle">${esc(s.title)}</div></div>`;
   let html = `<p class="narr">${narration(s)}</p>`;
   if (s.agg === 'skip') html += `<div class="res">${img('shield-yes', 34)}<div><div class="rs">This step never happens. The search was stopped at step ${CASE.stopAt + 1}.</div></div><span></span></div>`;
   else {
@@ -664,8 +685,8 @@ function renderLaws() {
 
 /* ================= welcome ================= */
 $('w-sub').textContent = `It depends on where you live. ${counts.rules} states have at least one of 7 common protections. ${counts.zero} have a law with none of them. ${counts.none} have no law at all.`;
-function openWelcome() { $('welcome').classList.add('on'); setTimeout(() => $('welcome').querySelector('[data-go]').focus(), 50); }
-function closeWelcome() { $('welcome').classList.remove('on'); try { localStorage.setItem('fv-seen', '1'); } catch (e) {} }
+function openWelcome() { $('welcome').inert = false; $('app').inert = true; $('welcome').classList.add('on'); setTimeout(() => $('welcome').querySelector('[data-go]').focus(), 50); }
+function closeWelcome() { $('welcome').classList.remove('on'); $('welcome').inert = true; $('app').inert = false; try { localStorage.setItem('fv-seen', '1'); } catch (e) {} }
 $('welcome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) { closeWelcome(); setTab(b.dataset.go); } else if (e.target === $('welcome')) closeWelcome(); };
 $('home').onclick = openWelcome;
 

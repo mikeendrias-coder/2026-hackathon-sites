@@ -12,28 +12,30 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip" href="#app">Skip to main content</a>
 
 <header class="bar">
-  <button class="brand" id="home" aria-label="Face Value, open the start screen">
+  <button class="brand" id="home" data-tip="Open the start screen">
     <img class="px" src="icons/logo.svg" alt="">
     <span><b>FACE VALUE<span class="cur" aria-hidden="true">_</span></b><small>State face recognition laws</small></span>
   </button>
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">Your state</button>
-    <button class="tab" role="tab" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Follow a case</button>
-    <button class="tab" role="tab" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
-    <button class="tab" role="tab" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Read the laws</button>
+    <button class="tab" role="tab" id="tab-state" aria-controls="v-state" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">Your state</button>
+    <button class="tab" role="tab" id="tab-case" aria-controls="v-case" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Follow a case</button>
+    <button class="tab" role="tab" id="tab-compare" aria-controls="v-compare" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
+    <button class="tab" role="tab" id="tab-laws" aria-controls="v-laws" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Read the laws</button>
   </nav>
   <div class="right">
-    <button class="pill" id="open-about"><span aria-hidden="true">i</span><span class="lt">About this page</span></button>
+    <button class="pill motion" id="motion" aria-pressed="false" data-tip="Pause or play all animation"><img class="px" src="icons/who-local.svg" alt=""><span class="lt" id="motion-t">Pause motion</span><span class="sr-only" id="motion-sr">Pause all animation</span></button>
+    <button class="pill" id="open-about" aria-label="About this page" data-tip="About this page, sources and terms"><span class="i-wrap"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></span><span class="lt">About this page</span></button>
   </div>
 </header>
 
-<main class="app" id="app">
+<main class="app" id="app" tabindex="-1">
   <!-- map column (desktop) -->
   <aside class="mapcol" aria-label="Pick a state">
     <div class="card mapcard">
-      <div class="hd"><span class="label dot">Pick a state</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean">i</button></div>
+      <div class="hd"><span class="label dot">Pick a state</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div class="tiles" id="tiles" role="group" aria-label="States"></div>
       <div class="mlegend" id="mlegend"></div>
       <label class="sr-only" for="state-pick">State</label>
@@ -45,7 +47,7 @@
       <span class="arrow" aria-hidden="true">→</span>
     </button>
     <div class="card legendcard" aria-label="How to read the symbols">
-      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read it</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols">i</button></div>
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read it</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div><img class="px" src="icons/shield-yes.svg" alt=""><span class="tagline t-yes">Yes</span>Protected by state law</div>
       <div><img class="px" src="icons/shield-part.svg" alt=""><span class="tagline t-part">Partly</span>Only sometimes, or unclear</div>
       <div><img class="px" src="icons/shield-no.svg" alt=""><span class="tagline t-no">No</span>Not protected</div>
@@ -54,8 +56,8 @@
   </aside>
 
   <!-- YOUR STATE -->
-  <section class="view card" id="v-state" aria-label="Your state">
-    <div class="mstate" style="padding:12px 16px 0"><select class="select" data-statepick aria-label="State"></select><button class="info" data-info="map" aria-label="About the map">i</button></div>
+  <section class="view card" id="v-state" role="tabpanel" aria-labelledby="tab-state" tabindex="-1">
+    <div class="mstate" style="padding:12px 16px 0"><select class="select" data-statepick aria-label="State"></select><button class="info" data-info="map" aria-label="About the map"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
     <div class="hero">
       <div class="htext">
         <div class="label dot" id="s-kicker"></div>
@@ -67,7 +69,7 @@
     <div class="scroll" style="flex:1;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
         <span class="label">The 7 protections we check</span>
-        <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are">i</button>
+        <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
         <span class="small muted tapnote" style="margin-left:auto">Tap one to read the law</span>
       </div>
       <div class="prots" id="s-prots"></div>
@@ -76,7 +78,7 @@
   </section>
 
   <!-- FOLLOW A CASE -->
-  <section class="view" id="v-case" aria-label="Follow a case" style="gap:12px">
+  <section class="view" id="v-case" role="tabpanel" aria-labelledby="tab-case" tabindex="-1" style="gap:12px">
     <div class="mstate"><select class="select" data-statepick aria-label="State"></select><button class="btn ghost" data-open="stories" style="padding:10px 14px">Stories</button></div>
     <div class="fbar" id="fbar">
       <label class="seg"><span class="label">Who is searching</span><select id="f-who"></select></label>
@@ -86,7 +88,7 @@
     </div>
     <div class="card trackcard">
       <div class="sky" aria-hidden="true"><img class="px" src="icons/cloud.svg" alt="" style="top:96px;animation-duration:38s;animation-delay:-6s"><img class="px" src="icons/cloud.svg" alt="" style="top:118px;width:44px;height:44px;opacity:.7;animation-duration:55s;animation-delay:-30s"><img class="px" src="icons/cloud.svg" alt="" style="top:84px;width:52px;height:52px;animation-duration:46s;animation-delay:-20s"></div>
-      <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates" data-tip="How to read the gates and colors">i</button></div>
+      <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates" data-tip="How to read the gates and colors"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div class="track" id="track"></div>
     </div>
     <div class="card stepcard">
@@ -102,7 +104,7 @@
   </section>
 
   <!-- COMPARE -->
-  <section class="view card" id="v-compare" aria-label="Compare two states">
+  <section class="view card" id="v-compare" role="tabpanel" aria-labelledby="tab-compare" tabindex="-1">
     <div class="cmpwrap scroll">
       <div class="cmphead">
         <label><span class="label">State A</span><select class="select" id="cmp-a" style="margin-top:6px"></select></label>
@@ -115,17 +117,17 @@
   </section>
 
   <!-- READ THE LAWS -->
-  <section class="view card" id="v-laws" aria-label="Read the laws and bills">
+  <section class="view card" id="v-laws" role="tabpanel" aria-labelledby="tab-laws" tabindex="-1">
     <div class="lawswrap">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div class="ltabs" role="tablist" id="ltabs"></div>
-        <button class="info" data-info="laws" aria-label="About this data" data-tip="Where this data comes from">i</button>
+        <button class="info" data-info="laws" aria-label="About this data" data-tip="Where this data comes from"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
       </div>
       <div class="lfilters">
-        <input class="search" id="l-q" type="search" placeholder="Search the text, like warrant, drone or lineup" aria-label="Search">
-        <select class="select" id="l-state" aria-label="State"></select>
-        <select class="select" id="l-prot" aria-label="Protection"></select>
-        <select class="select" id="l-status" aria-label="Status"></select>
+        <label><span class="label">Search the text</span><input class="search" id="l-q" type="search" placeholder="Like warrant, drone or lineup"></label>
+        <label><span class="label">State</span><select class="select" id="l-state"></select></label>
+        <label><span class="label">Protection</span><select class="select" id="l-prot"></select></label>
+        <label><span class="label">Status</span><select class="select" id="l-status"></select></label>
       </div>
       <div class="lcount"><span class="label" id="l-count"></span><button class="copy" id="l-clear">Clear filters</button></div>
       <div class="ltable scroll" id="ltable"></div>
@@ -134,19 +136,19 @@
 </main>
 
 <nav class="bnav" role="tablist" aria-label="Sections">
-  <button role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">State</button>
-  <button role="tab" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Case</button>
-  <button role="tab" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
-  <button role="tab" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Laws</button>
+  <button role="tab" aria-controls="v-state" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">State</button>
+  <button role="tab" aria-controls="v-case" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Case</button>
+  <button role="tab" aria-controls="v-compare" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
+  <button role="tab" aria-controls="v-laws" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Laws</button>
 </nav>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-title">
+<aside class="drawer" id="drawer" inert role="dialog" aria-modal="true" aria-labelledby="d-title">
   <div class="dhead"><div class="tt"><div class="label dot" id="d-kicker"></div><h2 id="d-title"></h2></div><button class="x" id="d-close" aria-label="Close">×</button></div>
   <div class="dbody scroll" id="d-body" style="flex:1"></div>
 </aside>
 
-<div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="w-title">
+<div class="welcome" id="welcome" inert role="dialog" aria-modal="true" aria-labelledby="w-title">
   <div class="wcard">
     <div class="wtop">
       <svg class="net" viewBox="0 0 360 260" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1"><path d="M10 250 C120 160 200 120 360 20"/><path d="M60 260 C160 140 260 110 350 120"/><path d="M150 10 C200 90 250 170 340 250"/></g><g fill="#E2FE90"><circle cx="196" cy="118" r="3.5"/><circle cx="254" cy="114" r="3.5"/><circle cx="281" cy="196" r="3.5"/><circle cx="118" cy="168" r="3.5"/></g></svg>
