@@ -16,7 +16,7 @@
 <header class="bar">
   <button class="brand" id="home" aria-label="Face Value, open the start screen">
     <img class="px" src="icons/logo.svg" alt="">
-    <span><b>FACE VALUE</b><small>State face recognition laws</small></span>
+    <span><b>FACE VALUE<span class="cur" aria-hidden="true">_</span></b><small>State face recognition laws</small></span>
   </button>
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/gate-closed.svg" alt="">Your state</button>
@@ -45,7 +45,7 @@
       <span class="arrow" aria-hidden="true">→</span>
     </button>
     <div class="card legendcard" aria-label="How to read the gates">
-      <span class="label dot" style="display:flex;justify-content:space-between;align-items:center">How to read the gates <button class="info" data-info="gates" aria-label="More about the gates">i</button></span>
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read the gates</span><button class="info" data-info="gates" aria-label="More about the gates">i</button></div>
       <div><img class="px" src="icons/gate-closed.svg" alt="">Protected by state law</div>
       <div><img class="px" src="icons/gate-partial.svg" alt="">Partly protected, or unclear</div>
       <div><img class="px" src="icons/gate-open.svg" alt="">Not protected</div>
@@ -57,12 +57,12 @@
   <section class="view card" id="v-state" aria-label="Your state">
     <div class="mstate" style="padding:12px 16px 0"><select class="select" data-statepick aria-label="State"></select><button class="info" data-info="map" aria-label="About the map">i</button></div>
     <div class="hero">
-      <div>
+      <div class="htext">
         <div class="label dot" id="s-kicker"></div>
         <h1 id="s-name"></h1>
+        <p class="sum" id="s-sum"></p>
       </div>
-      <div id="s-badge"></div>
-      <p class="sum" id="s-sum"></p>
+      <div class="hud" id="s-hud"></div>
     </div>
     <div class="scroll" style="flex:1;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
@@ -85,6 +85,7 @@
       <label class="seg"><span class="label">What crime</span><select id="f-crime"></select></label>
     </div>
     <div class="card trackcard">
+      <div class="sky" aria-hidden="true"><img class="px" src="icons/cloud.svg" alt="" style="top:96px;animation-duration:38s;animation-delay:-6s"><img class="px" src="icons/cloud.svg" alt="" style="top:118px;width:44px;height:44px;opacity:.7;animation-duration:55s;animation-delay:-30s"><img class="px" src="icons/cloud.svg" alt="" style="top:84px;width:52px;height:52px;animation-duration:46s;animation-delay:-20s"></div>
       <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates">i</button></div>
       <div class="track" id="track"></div>
     </div>
