@@ -15,7 +15,8 @@
 <a class="skip" href="#app">Skip to main content</a>
 
 <header class="bar">
-  <button class="brand" id="home" data-tip="Open the start screen">
+  <svg class="barnet" viewBox="0 0 900 64" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"><path d="M120 66 C300 46 470 14 900 -4"/><path d="M330 66 C470 40 640 30 900 50"/><path d="M560 -2 C610 18 690 44 770 66"/></g><g fill="#E2FE90"><circle cx="452" cy="4" r="2.4"/><circle cx="604" cy="60" r="2.4"/><circle cx="700" cy="4" r="2.4"/><circle cx="845" cy="61" r="2.4"/></g></svg>
+  <button class="brand" id="home" data-tip="Home">
     <img class="px" src="icons/logo.svg" alt="">
     <span><b>FACE VALUE<span class="cur" aria-hidden="true">_</span></b></span>
   </button>
@@ -55,6 +56,32 @@
       <div class="gates"><img class="px" src="icons/gate-closed.svg" alt=""><img class="px" src="icons/gate-partial.svg" alt=""><img class="px" src="icons/gate-open.svg" alt=""><span>Same colors as gates on the case road</span></div>
     </div>
   </aside>
+
+  <!-- HOME -->
+  <section class="view" id="v-home" aria-labelledby="w-title" tabindex="-1">
+    <div class="homehero">
+      <svg class="net" viewBox="0 0 520 300" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1"><path d="M40 300 C190 190 300 130 520 20"/><path d="M110 300 C230 160 360 120 520 130"/><path d="M230 0 C290 100 360 200 480 300"/></g><g fill="#E2FE90"><circle cx="300" cy="137" r="4"/><circle cx="372" cy="128" r="4"/><circle cx="410" cy="230" r="4"/><circle cx="210" cy="200" r="4"/><circle cx="455" cy="62" r="4"/></g></svg>
+      <div class="hh-top">
+        <div class="hh-text">
+          <h1 id="w-title">What stops police from using face recognition on you?</h1>
+          <p id="w-sub"></p>
+        </div>
+        <div class="hstats" id="hstats"></div>
+      </div>
+      <div class="wscene" aria-hidden="true">
+        <div class="cam"><img class="px" src="icons/src-cctv.svg" alt=""></div>
+        <div class="g"><img class="px" src="icons/gate-closed.svg" alt=""></div>
+        <div class="w"><img class="px" src="icons/who-local.svg" alt=""></div>
+        <div class="ground"></div>
+      </div>
+    </div>
+    <div class="hchoices">
+      <button data-go="state"><img class="px" src="icons/shield-yes.svg" alt=""><span><b>See your state</b><span>Which of 7 common protections it has</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="case"><img class="px" src="icons/step-search.svg" alt=""><span><b>Follow a case</b><span>Walk one police search, step by step</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="compare"><img class="px" src="icons/step-lineup.svg" alt=""><span><b>Compare two states</b><span>Same case, side by side</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="laws"><img class="px" src="icons/step-disclose.svg" alt=""><span><b>Read the laws</b><span>Search every law, bill and exact quote</span></span><span class="arrow" aria-hidden="true">→</span></button>
+    </div>
+  </section>
 
   <!-- YOUR STATE -->
   <section class="view card" id="v-state" role="tabpanel" aria-labelledby="tab-state" tabindex="-1">
@@ -148,31 +175,6 @@
   <div class="dhead"><div class="tt"><div class="label dot" id="d-kicker"></div><h2 id="d-title"></h2></div><button class="x" id="d-close" aria-label="Close">×</button></div>
   <div class="dbody scroll" id="d-body" style="flex:1"></div>
 </aside>
-
-<div class="welcome" id="welcome" inert role="dialog" aria-modal="true" aria-labelledby="w-title">
-  <div class="wcard">
-    <div class="wtop">
-      <svg class="net" viewBox="0 0 360 260" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1"><path d="M10 250 C120 160 200 120 360 20"/><path d="M60 260 C160 140 260 110 350 120"/><path d="M150 10 C200 90 250 170 340 250"/></g><g fill="#E2FE90"><circle cx="196" cy="118" r="3.5"/><circle cx="254" cy="114" r="3.5"/><circle cx="281" cy="196" r="3.5"/><circle cx="118" cy="168" r="3.5"/></g></svg>
-      <div class="kick"><img class="px" src="icons/logo.svg" alt=""><span class="pxf" style="font-size:16px">FACE VALUE</span></div>
-      <h1 id="w-title">What stops police from using face recognition on you?</h1>
-      <p id="w-sub"></p>
-      <div class="wscene" aria-hidden="true">
-        <div class="cam"><img class="px" src="icons/src-cctv.svg" alt=""></div>
-        <div class="g"><img class="px" src="icons/gate-closed.svg" alt=""></div>
-        <div class="w"><img class="px" src="icons/who-local.svg" alt=""></div>
-        <div class="ground"></div>
-      </div>
-    </div>
-    <div class="wbody">
-      <div class="wchoices">
-        <button data-go="state"><img class="px" src="icons/shield-yes.svg" alt=""><b>See your state</b><span>Which of 7 common protections it has</span></button>
-        <button data-go="case"><img class="px" src="icons/step-search.svg" alt=""><b>Follow a case</b><span>Walk one police search step by step</span></button>
-        <button data-go="laws"><img class="px" src="icons/step-disclose.svg" alt=""><b>Read the laws</b><span>Search every law, bill and exact quote</span></button>
-      </div>
-      <div class="wfoot"><span>A CDT staff hackathon prototype. Not legal advice.</span><button class="copy" data-go="state">Skip</button></div>
-    </div>
-  </div>
-</div>
 
 <script src="data.js"></script>
 <script src="app.js"></script>

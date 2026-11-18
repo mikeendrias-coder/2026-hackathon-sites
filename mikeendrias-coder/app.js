@@ -43,8 +43,8 @@ const LIMIT = {
   'limited to students in school districts': 'it would only cover students in schools'
 };
 const plainLimit = l => LIMIT[String(l).toLowerCase()] || l;
-const BILLSTEP = { 'Introduced': 'Introduced, then stalled', 'Hearing held': 'Got a hearing, then stalled', 'Committee vote': 'Voted on in committee, then stalled',
-  'Passed one chamber': 'Passed one chamber, then stalled', 'Failed': 'Failed', 'Failed floor vote': 'Failed a full vote' };
+const BILLSTEP = { 'Introduced': 'Introduced', 'Hearing held': 'Got a hearing', 'Committee vote': 'Committee vote',
+  'Passed one chamber': 'Passed one chamber', 'Failed': 'Failed', 'Failed floor vote': 'Failed a full vote' };
 const LAWSTATUS = { 'Unchanged': 'In effect', 'New': 'New this year', 'Amended': 'Changed this year' };
 
 const WHO = [['local', 'Local police', 'local police'], ['state', 'State police', 'state police'], ['federal', 'Federal agent', 'a federal agent, like the FBI or ICE']];
@@ -87,7 +87,7 @@ const PRESETS = [
   { t: 'A law with no limits', s: { state: 'Kentucky', who: 'local', src: 'photo', db: 'dmv', crime: 'minor' },
     d: 'Kentucky has a face recognition law. Does it actually hold police back?' },
   { t: 'No law at all', s: { state: 'Ohio', who: 'local', src: 'cctv', db: 'mug', crime: 'minor' },
-    d: 'Ohio has no law yet. Every step is open, but bills are still alive.' }
+    d: 'Ohio has no law yet. Every step of the search is open.' }
 ];
 
 const GLOSS = {
@@ -99,7 +99,7 @@ const GLOSS = {
   'dmv': ["Driver's license photos", 'Photos the state takes for licenses and IDs. Most adults are in this database, not just people who have been arrested.'],
   'mugshots': ['Mugshots', 'Photos taken when someone is arrested.'],
   'federal agent': ['Federal agent', 'Someone working for the national government, like the FBI or ICE, rather than for a city, county or state.'],
-  'bill': ['Bill', 'A proposed law. "Still alive" means lawmakers can still pass it. Otherwise it died without becoming law.'],
+  'bill': ['Bill', 'A proposed law. The bills here were introduced in state legislatures but have not become law.'],
   'unclear': ['Unclear', 'Our research flagged an open question about how this law should be counted, or who it covers. Most often: whether a state law also binds federal agents.']
 };
 const term = (key, text) => `<span class="term" role="button" tabindex="0" data-term="${esc(key)}" data-tip="${esc(GLOSS[key][1])}">${esc(text || GLOSS[key][0])}</span>`;
@@ -131,14 +131,14 @@ const mapLevel = name => {
 
 /* ================= app state (kept in the address) ================= */
 const HAD_HASH = location.hash.length > 1;
-const S = { tab: 'state', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana' };
+const S = { tab: HAD_HASH ? 'state' : 'home', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana' };
 const KEYS = ['tab', 'state', 'who', 'src', 'db', 'crime'];
 try {
   const h = new URLSearchParams(location.hash.slice(1));
   KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); });
 } catch (e) {}
 if (!D.states.some(s => s.name === S.state)) S.state = 'Maryland';
-if (!['state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'state';
+if (!['home', 'state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'home';
 if (!find(WHO, S.who)) S.who = 'local'; if (!find(SRC, S.src)) S.src = 'photo'; if (!find(DB, S.db)) S.db = 'dmv'; if (!find(CRIME, S.crime)) S.crime = 'serious';
 const saveHash = () => { try { history.replaceState(null, '', '#' + new URLSearchParams(Object.fromEntries(KEYS.map(k => [k, S[k]])))); } catch (e) {} };
 
@@ -171,7 +171,7 @@ function ruleStatus(state, rule, ctx, at) {
   return { status: at === 'lineup' ? 'info' : 'gap', hits };
 }
 const billsFor = (state, rule) => D.bills.filter(b => b.state === state && b.rules.includes(rule))
-  .sort((a, b) => (b.pending - a.pending) || String(b.year).localeCompare(String(a.year)));
+  .sort((a, b) => String(b.year).localeCompare(String(a.year)));
 function effective(state, rule, ctx, at) {
   const r = ruleStatus(state, rule, ctx, at);
   if (r.status === 'covered' || at === 'lineup' || S.whatif === 'none') return r;
@@ -224,10 +224,10 @@ function trap(e, box) {
   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Tab') { if ($('drawer').classList.contains('on')) trap(e, $('drawer')); else if ($('welcome').classList.contains('on')) trap(e, $('welcome')); }
+  if (e.key === 'Tab' && $('drawer').classList.contains('on')) trap(e, $('drawer'));
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { if ($('drawer').classList.contains('on')) closeDrawer(); else if ($('welcome').classList.contains('on')) closeWelcome(); }
+  if (e.key === 'Escape' && $('drawer').classList.contains('on')) closeDrawer();
 });
 
 /* shared pieces used inside the drawer */
@@ -240,7 +240,7 @@ const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
 const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pchip${limits[r] ? ' lim' : ''}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${esc(PROT[r].short)}${limits[r] ? ' (limited)' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pchip none">None of the 7</span></div>';
-const billStatus = b => b.pending ? '<span class="tagline t-would">Still alive</span>' : `<span class="tagline t-no">${esc(BILLSTEP[b.step] || b.step)}</span>`;
+const billStatus = b => `<span class="tagline t-neutral">${esc(BILLSTEP[b.step] || b.step)} · ${esc(b.year)}</span>`;
 const lawRef = l => `data-law="${esc(l.state + '|' + l.name)}"`;
 const billRef = b => `data-bill="${esc(b.state + '|' + b.name)}"`;
 const getLaw = ref => { const [s, n] = ref.split('|'); return D.laws.find(l => l.state === s && l.name === n); };
@@ -261,7 +261,7 @@ function billDrawer(b, hl) {
   const lim = Object.entries(b.limits);
   openDrawer(`${b.state} · Bill`, `<span>${esc(b.name)}</span> ${billStatus(b)}`, `
     <div class="sec"><p>${hilite(b.does, hl)}</p></div>
-    <dl class="kv"><dt>What happened</dt><dd>${b.pending ? 'Still alive. Lawmakers can still pass it.' : esc(BILLSTEP[b.step] || b.step)}</dd><dt>Year</dt><dd>${esc(b.year)}</dd><dt>Sponsor</dt><dd>${esc(b.sponsor || 'Not recorded')}</dd></dl>
+    <dl class="kv"><dt>Furthest step</dt><dd>${esc(BILLSTEP[b.step] || b.step)}</dd><dt>Year</dt><dd>${esc(b.year)}</dd><dt>Sponsor</dt><dd>${esc(b.sponsor || 'Not recorded')}</dd></dl>
     <div class="sec"><h3>Protections it would add</h3>${protChips(b.rules, b.limits)}${lim.length ? `<ul class="small" style="margin:0;padding-left:18px">${lim.map(([r, v]) => `<li><b>${esc(PROT[r].short)}:</b> ${esc(plainLimit(v))}.</li>`).join('')}</ul>` : ''}</div>
     <div class="sec"><h3>The exact wording</h3>${qs.length ? qs.map(q => quoteHTML(q, hl)).join('') : '<p class="muted small">No quoted text recorded for this bill. Open the bill text below.</p>'}</div>
     <div class="linkrow">${lawLink(b.link, 'Bill text')}<button class="btn ghost" data-goto="state" data-st="${esc(b.state)}">${esc(b.state)} scorecard</button></div>`, 'bill');
@@ -304,7 +304,7 @@ const legendHTML = big => `<div class="mlegend"${big ? ' style="font-size:14px"'
   <span><i class="sw" style="background:var(--paper);box-shadow:inset 0 0 0 1px var(--rule-2)"></i>No law</span></div>`;
 function aboutDrawer() {
   openDrawer('About', 'About Face Value', `
-    <p>Face Value shows, step by step, where state laws limit police use of ${term('face recognition')} during a criminal investigation, and where they leave gaps.</p>
+    <p>Face Value shows, step by step, where state laws limit police use of ${term('face recognition', 'face recognition')} during a criminal investigation, and where they leave gaps.</p>
     <div class="sec"><h3>How to use it</h3><div class="mini">
       <button data-goto="state"><span><b>Your state</b><br><span class="small muted">A scorecard of the 7 protections</span></span><span class="arrow">→</span></button>
       <button data-goto="case"><span><b>Follow a case</b><br><span class="small muted">Walk one search from start to finish</span></span><span class="arrow">→</span></button>
@@ -321,7 +321,7 @@ function storiesDrawer() {
 
 // One delegated click handler for everything the drawer and pages can contain.
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-term],[data-info],[data-law],[data-bill],[data-goto],[data-preset],[data-copy],[data-open],[data-prot]');
+  const t = e.target.closest('[data-term],[data-info],[data-law],[data-bill],[data-goto],[data-go],[data-preset],[data-copy],[data-open],[data-prot]');
   if (!t) return;
   if (t.dataset.term) { const [tt, dd] = GLOSS[t.dataset.term]; openDrawer('Plain language', esc(tt), `<p style="font-size:17px">${esc(dd)}</p><p class="small"><button class="copy" data-open="about">All terms</button></p>`); }
   else if (t.dataset.info) { const [k, ti, fn, ic] = INFO[t.dataset.info]; openDrawer(k, esc(ti), fn(), ic); }
@@ -332,6 +332,7 @@ document.addEventListener('click', e => {
   else if (t.dataset.open === 'stories') storiesDrawer();
   else if (t.dataset.open === 'about') aboutDrawer();
   else if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => { t.textContent = 'Copied'; t.setAttribute('aria-live', 'polite'); setTimeout(() => t.textContent = 'Copy', 1400); }).catch(() => {}); }
+  else if (t.dataset.go) setTab(t.dataset.go);
   else if (t.dataset.goto) { closeDrawer(); if (t.dataset.st) setState(t.dataset.st, false); setTab(t.dataset.goto); }
 });
 $('open-about').onclick = aboutDrawer;
@@ -362,9 +363,10 @@ $('open-stories').onclick = storiesDrawer;
 /* ================= tabs ================= */
 function setTab(tab) {
   S.tab = tab;
-  document.querySelectorAll('[role=tab][data-tab]').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === tab); b.tabIndex = b.dataset.tab === tab ? 0 : -1; });
-  ['state', 'case', 'compare', 'laws'].forEach(v => $('v-' + v).classList.toggle('on', v === tab));
-  $('app').classList.toggle('wide', tab === 'compare' || tab === 'laws');
+  document.querySelectorAll('[role=tablist]').forEach(list => list.querySelectorAll('[role=tab][data-tab]').forEach((b, k) => { b.setAttribute('aria-selected', b.dataset.tab === tab); b.tabIndex = b.dataset.tab === tab || (tab === 'home' && k === 0) ? 0 : -1; }));
+  ['home', 'state', 'case', 'compare', 'laws'].forEach(v => $('v-' + v).classList.toggle('on', v === tab));
+  $('app').classList.toggle('wide', tab === 'compare' || tab === 'laws' || tab === 'home');
+  $('home').toggleAttribute('aria-current', tab === 'home'); if (tab === 'home') $('home').setAttribute('aria-current', 'page');
   if (tab === 'compare') renderCompare();
   if (tab === 'laws') renderLaws();
   if (tab === 'case') go(S.step, false);
@@ -414,7 +416,6 @@ function renderState() {
   const st = S.state, g = groupOf(st);
   const lawsHere = D.laws.filter(l => l.state === st);
   const billsHere = D.bills.filter(b => b.state === st);
-  const alive = billsHere.filter(b => b.pending);
   const n = protCount(st), nFull = PORDER.filter(r => stateProt(st, r).level === 'yes').length;
   $('s-kicker').textContent = 'State scorecard';
   $('s-name').textContent = st;
@@ -423,7 +424,7 @@ function renderState() {
     <div class="shields" role="img" aria-label="${n} of 7 protections">${levels.map((l, i) => `<img class="px" src="${IC(LV[l][0])}" alt="" tabindex="0" data-tip="${esc(PROT[PORDER[i]].short)}: ${LV[l][1]}" style="animation-delay:${i * 70}ms">`).join('')}</div>
     <div class="score"><b>${n}/7</b><span>${g === 'none' ? 'No face recognition law' : g === 'zero' ? 'Has a law, but none of the 7' : n > nFull ? `${nFull} full, ${n - nFull} partial` : 'All in full'}</span></div>`;
   $('s-sum').innerHTML = g === 'none'
-    ? `${esc(st)} has no law about police ${term('face recognition')}. ${alive.length ? `${alive.length} ${term('bill', alive.length > 1 ? 'bills are' : 'bill is')} still alive.` : ''} It's one of ${counts.none} states with no law.`
+    ? `${esc(st)} has no law about police ${term('face recognition', 'face recognition')}. It's one of ${counts.none} states with no law.${billsHere.length ? ` Lawmakers have introduced ${billsHere.length} ${term('bill', billsHere.length > 1 ? 'bills' : 'bill')} on it.` : ''}`
     : g === 'zero'
     ? `${esc(st)} has a face recognition law, but it doesn't add any of the 7 common protections. ${esc(lawsHere.map(l => l.does).join(' '))}`
     : `${esc(st)} has ${lawsHere.length === 1 ? 'one law' : lawsHere.length + ' laws'} on police face recognition. ${nFull ? `${nFull} protection${nFull > 1 ? 's apply' : ' applies'} in full` : 'None apply in full'}${n > nFull ? `, and ${n - nFull} only in some situations` : ''}.`;
@@ -431,18 +432,18 @@ function renderState() {
     const sp = stateProt(st, r);
     const w = LV[sp.level];
     const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : ''; })() : '';
-    const nb = billsFor(st, r).filter(b => b.pending).length;
+    const nb = billsFor(st, r).length;
     return `<button class="prot" data-prot="${r}">${img(PICON[r], 44)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
-      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} alive` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
+      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} proposed` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 44)}<span><b>Bills in ${esc(st)}</b>
-      <span class="st">${billsHere.length ? `${billsHere.length} recorded${alive.length ? `, ${alive.length} still alive` : ', none still alive'}` : 'None recorded'}</span></span><span class="end">${alive.length ? img('gate-would', 30) : ''}<span class="arrow" aria-hidden="true">→</span></span></button>`;
+      <span class="st">${billsHere.length ? `Proposed laws on face recognition. Tap to read ${billsHere.length > 1 ? 'them' : 'it'}.` : 'No bills recorded in this research'}</span></span><span class="end"><span class="count${billsHere.length ? '' : ' zero'}" aria-label="${billsHere.length} bills">${billsHere.length}</span><span class="arrow" aria-hidden="true">→</span></span></button>`;
   const other = lawsHere.filter(l => !l.rules.length);
   $('s-foot').innerHTML = `
-    ${other.length ? `<button class="chipbtn" id="s-other"><b>${other.length}</b> other face recognition law${other.length > 1 ? 's' : ''}</button>` : ''}
+    ${other.length ? `<button class="chipbtn" id="s-other"><span class="count sm">${other.length}</span>Other face recognition law${other.length > 1 ? 's' : ''}</button>` : ''}
     <span class="sp"></span>
     <button class="btn ghost" data-goto="compare">Compare</button>
     <button class="btn lime" data-goto="case">Follow a case in ${esc(st)} <span aria-hidden="true">→</span></button>`;
-  $('s-bills2').onclick = () => billsHere.length ? openDrawer(`${st} · Bills`, `Bills in ${esc(st)}`, `<div class="mini">${billsHere.sort((a, b) => (b.pending - a.pending) || String(b.year).localeCompare(String(a.year))).map(b => `<button ${billRef(b)}><span><b>${esc(b.name)}</b> ${billStatus(b)}<br><span class="small muted">${esc(b.does)}</span></span><span class="arrow">→</span></button>`).join('')}</div>`) : openDrawer(`${st} · Bills`, `Bills in ${esc(st)}`, `<p>No face recognition bills are recorded for ${esc(st)} in this research.</p>`);
+  $('s-bills2').onclick = () => billsHere.length ? openDrawer(`${st} · Bills`, `Bills in ${esc(st)}`, `<div class="mini">${billsHere.sort((a, b) => String(b.year).localeCompare(String(a.year))).map(b => `<button ${billRef(b)}><span><b>${esc(b.name)}</b> ${billStatus(b)}<br><span class="small muted">${esc(b.does)}</span></span><span class="arrow">→</span></button>`).join('')}</div>`) : openDrawer(`${st} · Bills`, `Bills in ${esc(st)}`, `<p>No face recognition bills are recorded for ${esc(st)} in this research.</p>`);
   const so = $('s-other'); if (so) so.onclick = () => openDrawer(`${st} · Laws`, `Other laws in ${esc(st)}`, `<p class="muted">These laws touch face recognition but aren't one of the 7 protections.</p><div class="mini">${other.map(l => `<button ${lawRef(l)}><span><b>${esc(l.name)}</b><br><span class="small muted">${esc(l.does)}</span></span><span class="arrow">→</span></button>`).join('')}</div>`);
 }
 
@@ -491,7 +492,7 @@ function sentence(r, step) {
   if (r.status === 'partial') return `Partly. ${st} has this protection, with a catch: ${plainLimit(r.top.limit)}.`;
   if (r.status === 'review') return `${st} has this protection, but its law is written for “${r.top.law.who.toLowerCase()}.” Whether it also covers federal agents isn't settled.`;
   if (r.status === 'bypassed') return `${st} has a law here, but ${r.top.reason}. So it doesn't protect this person.`;
-  if (r.status === 'would' && r.bill) return `Not protected today. ${r.bill.name} would add this${r.bill.limits[r.rule] ? `, but ${plainLimit(r.bill.limits[r.rule])}` : ''}. ${r.bill.pending ? 'That bill is still alive.' : 'That bill did not pass.'}`;
+  if (r.status === 'would' && r.bill) return `Not protected today. ${r.bill.name} (${r.bill.year}) would add this${r.bill.limits[r.rule] ? `, but ${plainLimit(r.bill.limits[r.rule])}` : ''}.`;
   if (r.status === 'would' && r.model) return `Not protected today. If ${st} had ${r.model}'s law, this step would be protected${r.rule === '3' && minor ? ', and the search would stop here' : ''}.`;
   return `Nothing in ${st} law protects people at this step. Only the U.S. Constitution's basic limits apply.`;
 }
@@ -533,7 +534,7 @@ function verdictHTML() {
       </div>
       ${S.whatif === 'borrow' ? `<select class="select" id="model" aria-label="State to copy">${models.map(m => `<option${m === S.model ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>` : ''}
     </div>
-    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? `Lime gates show what would change if every ${esc(st)} bill on this topic, even ones that died, had passed.` : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
+    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? `Lime gates show what would change if every ${esc(st)} bill on this topic, had passed.` : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
 }
 let walkTimer = null;
 function go(i, animate) {
@@ -589,7 +590,7 @@ $('next').onclick = nextStep;
 $('back').onclick = () => go(S.step - 1, true);
 $('restart').onclick = () => go(0, true);
 document.addEventListener('keydown', e => {
-  if (S.tab !== 'case' || $('drawer').classList.contains('on') || $('welcome').classList.contains('on')) return;
+  if (S.tab !== 'case' || $('drawer').classList.contains('on')) return;
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
   if (e.key === 'ArrowRight') nextStep();
   if (e.key === 'ArrowLeft') go(S.step - 1, true);
@@ -642,7 +643,7 @@ const LDEF = {
     status: [['', 'Any status'], ['clear', 'Settled'], ['check', 'Unclear']], ok: (r, s) => !s || (s === 'check' ? r.review : !r.review),
     open: (r, q) => lawDrawer(r, q), ref: r => lawRef(r) },
   bills: { label: 'Bills', rows: () => D.bills, cols: [['state', 'State'], ['name', 'Bill'], ['does', 'What it would do'], ['rules', 'Protections']],
-    status: [['', 'Any status'], ['alive', 'Still alive'], ['dead', 'Did not pass']], ok: (r, s) => !s || (s === 'alive' ? r.pending : !r.pending),
+    status: [['', 'Any progress'], ...Object.entries(BILLSTEP).map(([k, v]) => [k, v])], ok: (r, s) => !s || r.step === s,
     open: (r, q) => billDrawer(r, q), ref: r => billRef(r) },
   quotes: { label: 'Exact wording', rows: () => D.quotes, cols: [['state', 'State'], ['item', 'Law or bill'], ['text', 'Exact wording'], ['rule', 'Protection']],
     status: [['', 'Laws and bills'], ['law', 'Laws only'], ['bill', 'Bills only']], ok: (r, s) => !s || (s === 'law' ? r.kind === 'Law' : r.kind !== 'Law'),
@@ -670,7 +671,7 @@ function renderLaws() {
   const qq = $('l-q').value.trim();
   const cell = (r, k) => {
     if (k === 'state') return `<span class="s">${esc(r.state)}</span>`;
-    if (k === 'name') return `<span class="t">${hilite(r.name, qq)}${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.pending ? '<span class="tagline t-would">Still alive</span>' : ''}</span>`;
+    if (k === 'name') return `<span class="t">${hilite(r.name, qq)}${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.step ? billStatus(r) : ''}</span>`;
     if (k === 'item') return `<span class="t">${hilite(r.item, qq)}<span class="tagline t-no">${r.kind === 'Law' ? 'law' : 'bill'}</span></span>`;
     if (k === 'does') return `<span class="d">${hilite(r.does.length > 170 ? r.does.slice(0, 170) + '…' : r.does, qq)}</span>`;
     if (k === 'text') { const t = unq(r.text); return `<span class="d q">“${hilite(t.length > 200 ? t.slice(0, 200) + '…' : t, qq)}”</span>`; }
@@ -683,18 +684,15 @@ function renderLaws() {
   $('ltable').querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { LS = { key: b.dataset.sort, dir: LS.key === b.dataset.sort ? -LS.dir : 1 }; renderLaws(); });
 }
 
-/* ================= welcome ================= */
-$('w-sub').textContent = `It depends on where you live. ${counts.rules} states have at least one of 7 common protections. ${counts.zero} have a law with none of them. ${counts.none} have no law at all.`;
-function openWelcome() { $('welcome').inert = false; $('app').inert = true; $('welcome').classList.add('on'); setTimeout(() => $('welcome').querySelector('[data-go]').focus(), 50); }
-function closeWelcome() { $('welcome').classList.remove('on'); $('welcome').inert = true; $('app').inert = false; try { localStorage.setItem('fv-seen', '1'); } catch (e) {} }
-$('welcome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) { closeWelcome(); setTab(b.dataset.go); } else if (e.target === $('welcome')) closeWelcome(); };
-$('home').onclick = openWelcome;
+/* ================= home ================= */
+$('w-sub').textContent = 'It depends on where you live. Pick a state, follow a police search step by step, or read the laws themselves.';
+$('hstats').innerHTML = [[counts.rules, 'states have at least one of 7 common protections', 'shield-yes'], [counts.zero, 'have a face recognition law with none of them', 'shield-part'], [counts.none, 'have no face recognition law at all', 'shield-no']]
+  .map(([n, t, ic]) => `<div class="hstat">${img(ic, 36)}<b>${n}</b><span>${esc(t)}</span></div>`).join('');
+$('home').onclick = () => setTab('home');
 
 /* ================= start ================= */
 syncFilters();
 setState(S.state, false);
 restartCase(false);
 setTab(S.tab);
-let seen = false; try { seen = !!localStorage.getItem('fv-seen'); } catch (e) {}
-if (!seen && !HAD_HASH) openWelcome();
 })();
