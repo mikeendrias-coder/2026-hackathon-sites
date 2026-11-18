@@ -107,17 +107,23 @@
 
   <!-- FOLLOW A CASE -->
   <section class="view" id="v-case" role="tabpanel" aria-labelledby="tab-case" tabindex="-1" style="gap:12px">
-    <div class="mstate"><select class="select" data-statepick aria-label="State"></select><button class="btn ghost" data-open="stories" style="padding:10px 14px">Stories</button></div>
     <div class="fbar" id="fbar">
+      <label class="seg seg-state"><span class="label">State</span><select id="f-state" data-statepick></select></label>
       <label class="seg"><span class="label">Who is searching</span><select id="f-who"></select></label>
       <label class="seg"><span class="label">Photo from</span><select id="f-src"></select></label>
       <label class="seg"><span class="label">Searched against</span><select id="f-db"></select></label>
       <label class="seg"><span class="label">What crime</span><select id="f-crime"></select></label>
+      <button class="btn ghost fstories" data-open="stories"><img class="px" src="icons/step-photo.svg" alt="" width="22" height="22">Stories</button>
     </div>
+    <div class="casegrid">
     <div class="card trackcard">
       <div class="sky" aria-hidden="true"><img class="px" src="icons/cloud.svg" alt="" style="top:96px;animation-duration:38s;animation-delay:-6s"><img class="px" src="icons/cloud.svg" alt="" style="top:118px;width:44px;height:44px;opacity:.7;animation-duration:55s;animation-delay:-30s"><img class="px" src="icons/cloud.svg" alt="" style="top:84px;width:52px;height:52px;animation-duration:46s;animation-delay:-20s"></div>
       <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates" data-tip="How to read the gates and colors"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div class="track" id="track"></div>
+      <div class="trackfoot">
+        <div class="gatekey"><span class="label">On the road</span><span><img class="px" src="icons/gate-closed.svg" alt="">Protected</span><span><img class="px" src="icons/gate-partial.svg" alt="">Partly</span><span><img class="px" src="icons/gate-open.svg" alt="">Not protected</span></div>
+        <div class="storyrow"><span class="label">Try a story</span><div class="schips" id="schips"></div></div>
+      </div>
     </div>
     <div class="card stepcard">
       <div class="stephead" id="stephead"></div>
@@ -129,11 +135,13 @@
         <span class="hint">← → keys work too</span>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- COMPARE -->
   <section class="view card" id="v-compare" role="tabpanel" aria-labelledby="tab-compare" tabindex="-1">
     <div class="cmpwrap scroll">
+      <div class="seg2 cmpmode" id="cmp-mode" role="group" aria-label="What to compare"><button data-m="states"><img class="px" src="icons/step-lineup.svg" alt="" width="22" height="22">Compare two states</button><button data-m="laws"><img class="px" src="icons/law.svg" alt="" width="22" height="22">Compare the laws themselves</button></div>
       <div class="ctxchip" id="cmp-ctx"></div>
       <div id="cmp-grid"></div>
     </div>
@@ -147,7 +155,7 @@
         <button class="info" data-info="laws" aria-label="About this data" data-tip="Where this data comes from"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
       </div>
       <div class="lfilters">
-        <label><span class="label">Search the text</span><input class="search" id="l-q" type="search" placeholder="Like warrant, drone or lineup"></label>
+        <label><span class="label">Search the text</span><input class="search" id="l-q" type="search" placeholder="Like warrant, drone or lineup" autocomplete="off" autocorrect="off" spellcheck="false"></label>
         <label><span class="label">State</span><select class="select" id="l-state"></select></label>
         <label><span class="label">Protection</span><select class="select" id="l-prot"></select></label>
         <label><span class="label">Status</span><select class="select" id="l-status"></select></label>
@@ -173,5 +181,6 @@
 
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="dropdown.js"></script>
 </body>
 </html>

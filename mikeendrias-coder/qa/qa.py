@@ -1,5 +1,5 @@
-"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment (text ink vs icons and boxes), clipped text,
-overlapping buttons, target size, minimum text size, broken images, reflow, keyboard focus, console errors."""
+"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment, clipped text, overlaps, target size, text size,
+broken images, reflow, keyboard focus, console errors, and no browser-native dropdowns, tooltips or autofill."""
 import asyncio, json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 URL = os.environ.get('FV_URL', 'http://localhost:8765/index.html')
@@ -87,6 +87,10 @@ CHECKS = r"""
     const fs = parseFloat(getComputedStyle(el).fontSize); if (fs < 11) out.font.push(`${fs}px text: ${name(el)}`);
   }
   for (const im of document.querySelectorAll('img')) if (im.complete && im.naturalWidth === 0) out.img.push('broken image ' + im.getAttribute('src'));
+  out.native = [];
+  for (const s of document.querySelectorAll('select')) { const r = s.getBoundingClientRect(), cs = getComputedStyle(s); if (r.width > 2 && r.height > 2 && +cs.opacity > 0 && cs.visibility !== 'hidden' && cs.display !== 'none') out.native.push('native dropdown visible: ' + name(s)); if (!s._dd && !s.dataset.dd) out.native.push('dropdown not replaced: ' + name(s)); }
+  for (const e of document.querySelectorAll('[title]')) if (e.tagName !== 'svg' && !e.closest('svg')) out.native.push('browser tooltip (title attribute): ' + name(e));
+  for (const i of document.querySelectorAll('input:not([type=hidden])')) if (i.autocomplete !== 'off') out.native.push('browser autofill on: ' + name(i));
   return out;
 }
 """
@@ -112,8 +116,8 @@ async def run():
       pg = await ctx.new_page(); errs = []
       pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
       await pg.add_init_script("try{localStorage.setItem('fv-seen','1')}catch(e){}")
-      for tab in ['state', 'case', 'compare', 'laws', 'drawer', 'welcome', 'result']:
-        url = URL + f'#tab={"state" if tab in ("drawer","welcome") else "case" if tab=="result" else tab}&state=Maryland'
+      for tab in ['state', 'case', 'compare', 'cmplaws', 'laws', 'drawer', 'welcome', 'result']:
+        url = URL + f'#tab={"state" if tab in ("drawer","welcome") else "case" if tab=="result" else "compare" if tab=="cmplaws" else tab}&state=Maryland' + ('&cmode=laws&prot=1' if tab=='cmplaws' else '&cmode=states')
         await pg.goto('about:blank'); await pg.goto(url); await pg.wait_for_timeout(700)
         if tab == 'drawer': await pg.click('.prot >> nth=1'); await pg.wait_for_timeout(400)
         if tab == 'welcome': await pg.click('#home'); await pg.wait_for_timeout(400)

@@ -117,9 +117,11 @@ const counts = { rules: 0, zero: 0, none: 0 };
 D.states.forEach(s => counts[groupOf(s.name)]++);
 
 // State-level answer for one protection, without a specific case.
+// Default reach is local police plus state agencies; anything narrower is a limited form.
+const broad = x => !x.whoFor || x.whoFor.includes('any') || (x.whoFor.includes('local') && x.whoFor.includes('state'));
 function stateProt(state, rule) {
   const laws = D.laws.filter(l => l.state === state && l.rules.includes(rule));
-  const full = laws.filter(l => !l.limits[rule] && !l.source && !l.db);
+  const full = laws.filter(l => !l.limits[rule] && !l.source && !l.db && broad(l));
   const level = full.length ? 'yes' : laws.length ? 'part' : 'no';
   return { level, laws, review: laws.some(l => l.review) };
 }
@@ -131,14 +133,15 @@ const mapLevel = name => {
 
 /* ================= app state (kept in the address) ================= */
 const HAD_HASH = location.hash.length > 1;
-const S = { tab: HAD_HASH ? 'state' : 'home', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana' };
-const KEYS = ['tab', 'state', 'who', 'src', 'db', 'crime'];
+const S = { cmode: 'states', prot: '1', tab: HAD_HASH ? 'state' : 'home', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana' };
+const KEYS = ['tab', 'state', 'who', 'src', 'db', 'crime', 'cmode', 'prot'];
 try {
   const h = new URLSearchParams(location.hash.slice(1));
   KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); });
 } catch (e) {}
 if (!D.states.some(s => s.name === S.state)) S.state = 'Maryland';
 if (!['home', 'state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'home';
+if (!['states', 'laws'].includes(S.cmode)) S.cmode = 'states'; if (!PROT[S.prot]) S.prot = '1';
 if (!find(WHO, S.who)) S.who = 'local'; if (!find(SRC, S.src)) S.src = 'photo'; if (!find(DB, S.db)) S.db = 'dmv'; if (!find(CRIME, S.crime)) S.crime = 'serious';
 const saveHash = () => { try { history.replaceState(null, '', '#' + new URLSearchParams(Object.fromEntries(KEYS.map(k => [k, S[k]])))); } catch (e) {} };
 
@@ -284,11 +287,20 @@ function billDrawer(b, hl) {
     <div class="sec"><h3>The exact wording</h3>${qs.length ? qs.map(q => quoteHTML(q, hl)).join('') : '<p class="muted small">No quoted text recorded for this bill. Open the bill text below.</p>'}</div>
     <div class="linkrow">${lawLink(b.link, 'Bill text')}<button class="btn ghost" data-goto="state" data-st="${esc(b.state)}">${esc(b.state)} scorecard</button></div>`, 'bill');
 }
+const chipList = list => `<div class="linkrow">${list.map(s => `<button class="chipbtn" data-goto="state" data-st="${esc(s)}">${esc(s)}</button>`).join('')}</div>`;
+function stateGroups(rule) {
+  const full = [...new Set(D.laws.filter(l => l.rules.includes(rule) && !l.limits[rule] && !l.source && !l.db && broad(l)).map(l => l.state))].sort();
+  const part = [...new Set(D.laws.filter(l => l.rules.includes(rule)).map(l => l.state))].filter(s => !full.includes(s)).sort();
+  const bills = [...new Set(D.bills.filter(b => b.rules.includes(rule)).map(b => b.state))].filter(s => !full.includes(s)).sort();
+  const sec = (ic, t, list) => list.length ? `<div class="sec"><h3 class="h3i">${img(ic, 24)}<span>${t}</span><span class="count sm">${list.length}</span></h3>${chipList(list)}</div>` : '';
+  return sec('shield-yes', 'States where it is law in full', full) + sec('shield-part', 'States where it is law in a limited form', part) + sec('bill', 'States where bills would add or strengthen it', bills)
+    + `<div class="linkrow"><button class="btn lime" data-cmplaws="${rule}">Compare every version of this rule</button></div>`;
+}
 function protDrawer(state, rule) {
   const sp = stateProt(state, rule);
   const word = { yes: 'Yes', part: 'Partly', no: 'No' }[sp.level];
   const here = billsFor(state, rule);
-  const have = [...new Set(D.laws.filter(l => l.rules.includes(rule) && !l.limits[rule] && !l.source && !l.db).map(l => l.state))];
+  
   const lawBlocks = sp.laws.map(l => {
     const qs = quotesFor(l.name, state, rule);
     return `<div class="sec" style="gap:8px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b style="font:600 16px var(--head)">${esc(l.name)}</b><span class="small muted">${esc(l.year)}</span></div>
@@ -302,7 +314,7 @@ function protDrawer(state, rule) {
     <p>${esc(PROT[rule].long)}</p>
     ${sp.laws.length ? lawBlocks : `<p>Nothing in ${esc(state)} law adds this protection. Only the U.S. Constitution's basic limits on searches and arrests apply.</p>`}
     <div class="sec"><h3>${esc(state)} bills that would add it</h3>${here.length ? `<div class="mini">${here.map(billItem).join('')}</div>` : '<p class="small muted">None so far.</p>'}</div>
-    ${have.length ? `<div class="sec"><h3>States that already have it in full</h3><div class="linkrow">${have.map(s => `<button class="chipbtn" data-goto="state" data-st="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>` : ''}`, PICON[rule]);
+    ${stateGroups(rule)}`, PICON[rule]);
 }
 const INFO = {
   map: ['The map', 'Darker means more protection', () => `<p>Each square is a state. The darker the square, the more of the 7 protections that state's laws include, in full or in part.</p>${legendHTML(true)}<p class="small muted">Click a state to see its scorecard, or to follow a case there.</p>`, 'pin'],
@@ -383,7 +395,7 @@ function setTab(tab) {
   S.tab = tab;
   document.querySelectorAll('[role=tablist]').forEach(list => list.querySelectorAll('[role=tab][data-tab]').forEach((b, k) => { b.setAttribute('aria-selected', b.dataset.tab === tab); b.tabIndex = b.dataset.tab === tab || (tab === 'home' && k === 0) ? 0 : -1; }));
   ['home', 'state', 'case', 'compare', 'laws'].forEach(v => $('v-' + v).classList.toggle('on', v === tab));
-  $('app').classList.toggle('wide', tab === 'compare' || tab === 'laws' || tab === 'home');
+  $('app').classList.toggle('wide', tab !== 'state');
   $('home').toggleAttribute('aria-current', tab === 'home'); if (tab === 'home') $('home').setAttribute('aria-current', 'page');
   if (tab === 'compare') renderCompare();
   if (tab === 'laws') renderLaws();
@@ -450,7 +462,7 @@ function renderState() {
   $('s-prots').innerHTML = PORDER.map(r => {
     const sp = stateProt(st, r);
     const w = LV[sp.level];
-    const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : ''; })() : '';
+    const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : !broad(l) ? `only binds ${l.whoFor.map(w => WHO_FOR[w]).join(' and ')}` : ''; })() : '';
     const nb = billsFor(st, r).length;
     return `<button class="prot" data-prot="${r}">${img(PICON[r], 44)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
       <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} proposed` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
@@ -619,8 +631,13 @@ function loadPreset(i) {
   syncFilters(); setState(S.state, false); setTab('case'); restartCase(true);
 }
 
+$('schips').innerHTML = PRESETS.map((p, i) => `<button class="schip" data-preset="${i}" data-tip="${esc(p.d)}">${img('who-' + p.s.who, 22)}<span>${esc(p.t)}</span></button>`).join('');
+
 /* ================= COMPARE ================= */
 function renderCompare() {
+  $('cmp-mode').querySelectorAll('[data-m]').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === S.cmode));
+  $('cmp-ctx').hidden = S.cmode !== 'states';
+  if (S.cmode === 'laws') return renderCompareLaws();
   const A = S.state, B = S.cmpB === A ? (A === 'Montana' ? 'Maryland' : 'Montana') : S.cmpB;
   const wSave = S.whatif; S.whatif = 'none';
   const ca = computeCase(A, S), cb = computeCase(B, S);
@@ -649,6 +666,53 @@ function renderCompare() {
     <p class="cmpnote">${diffs ? `<span class="count sm">${diffs}</span> difference${diffs > 1 ? 's' : ''} between ${esc(A)} and ${esc(B)}, outlined in lime.` : `${esc(A)} and ${esc(B)} come out the same for this case.`} Tap any badge to read the law.</p>`;
   $('cmp-a').onchange = e => setState(e.target.value);
   $('cmp-b').onchange = e => { S.cmpB = e.target.value; renderCompare(); };
+}
+$('cmp-mode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { S.cmode = b.dataset.m; saveHash(); renderCompare(); } });
+document.addEventListener('click', e => { const b = e.target.closest('[data-cmplaws]'); if (b) { closeDrawer(); S.cmode = 'laws'; S.prot = b.dataset.cmplaws; setTab('compare'); } });
+
+/* Compare laws: every law and bill provision for one protection, grouped by the form it takes. */
+let CLBILLS = true;
+// Near-duplicate codings shown as one form (each item's own wording is still listed).
+const MERGE = { 'adds an offense': 'adds offenses', 'court order, ongoing surveillance only': 'ongoing surveillance only', 'for ongoing, real-time or persistent tracking use only': 'ongoing surveillance only' };
+function formsFor(rule) {
+  const items = [...D.laws.map(x => ({ ...x, kind: 'law' })), ...D.bills.map(x => ({ ...x, kind: 'bill' }))].filter(x => x.rules.includes(rule));
+  const groups = new Map();
+  for (const x of items) {
+    const raw = x.limits[rule] || '', lim = MERGE[raw.toLowerCase()] || raw;
+    const scope = [x.source && !/drone|body/i.test(raw) ? `only covers ${SRC_FOR[x.source]}` : '', x.db ? "only covers searches of driver's license photos" : '',
+      !broad(x) ? `only binds ${x.whoFor.map(w => WHO_FOR[w]).join(' and ')}` : ''].filter(Boolean);
+    const key = (lim.toLowerCase() || 'full') + '|' + scope.join(';');
+    if (!groups.has(key)) groups.set(key, { lim, scope, items: [], variants: new Set() });
+    if (raw && raw.toLowerCase() !== lim.toLowerCase()) groups.get(key).variants.add(plainLimit(raw));
+    groups.get(key).items.push(x);
+  }
+  return [...groups.values()].sort((p, q) => (!p.lim && !p.scope.length ? -1 : 0) - (!q.lim && !q.scope.length ? -1 : 0)
+    || q.items.filter(x => x.kind === 'law').length - p.items.filter(x => x.kind === 'law').length || q.items.length - p.items.length);
+}
+function renderCompareLaws() {
+  const r = S.prot, forms = formsFor(r);
+  const laws = forms.flatMap(f => f.items).filter(x => x.kind === 'law'), bills = forms.flatMap(f => f.items).filter(x => x.kind === 'bill');
+  const nStates = list => new Set(list.map(x => x.state)).size;
+  const qFor = x => D.quotes.filter(q => q.state === x.state && q.item === x.name && q.rule === r);
+  const head = `<div class="clpick" role="group" aria-label="Pick a protection">${PORDER.map(k => `<button class="clp" data-clp="${k}" aria-pressed="${k === r}" aria-label="${esc(PROT[k].short)}" data-tip="${esc(PROT[k].long)}">${img(PICON[k], 26)}<span>${esc(PROT[k].short)}</span></button>`).join('')}</div>
+    <div class="clhead">${img(PICON[r], 44)}<div><h2>${esc(PROT[r].short)}: ${forms.length} different version${forms.length === 1 ? '' : 's'}</h2><p>${esc(PROT[r].long)} <span class="muted">${laws.length} law${laws.length === 1 ? '' : 's'} in ${nStates(laws)} state${nStates(laws) === 1 ? '' : 's'}, ${bills.length} bill${bills.length === 1 ? '' : 's'} in ${nStates(bills)}.</span></p></div>
+      <div class="seg2" role="group" aria-label="What to include"><button data-clb="1" aria-pressed="${CLBILLS}">Laws and bills</button><button data-clb="0" aria-pressed="${!CLBILLS}">Laws only</button></div></div>`;
+  const card = f => {
+    const its = f.items.filter(x => CLBILLS || x.kind === 'law'); if (!its.length) return '';
+    const full = !f.lim && !f.scope.length;
+    const title = full ? 'The full rule, no limits' : f.lim ? plainLimit(f.lim).replace(/^it /, '').replace(/^./, c => c.toUpperCase()) : 'Full rule, narrow reach';
+    const nl = its.filter(x => x.kind === 'law').length, nb = its.length - nl;
+    return `<section class="clform ${full ? 'cl-full' : 'cl-lim'}">
+      <div class="clft">${img(full ? 'shield-yes' : 'shield-part', 30)}<div><h3>${esc(title)}</h3>${f.variants.size ? `<p class="clvar">Includes: ${[...f.variants].map(esc).join('; ')}</p>` : ''}${f.scope.length ? `<p class="clscope">${f.scope.map(s => `<span class="pb pb-none">${esc(s.replace(/^./, c => c.toUpperCase()))}</span>`).join('')}</p>` : ''}</div>
+        <div class="clcount">${nl ? `<span class="pb pb-yes">${nl} law${nl > 1 ? 's' : ''}</span>` : ''}${nb ? `<span class="pb pb-have">${nb} bill${nb > 1 ? 's' : ''}</span>` : ''}</div></div>
+      <div class="clitems">${its.sort((p, q) => (p.kind === 'law' ? 0 : 1) - (q.kind === 'law' ? 0 : 1) || p.state.localeCompare(q.state)).map(x => { const q = qFor(x);
+        return `<button class="clitem ${x.kind}" ${x.kind === 'law' ? lawRef(x) : billRef(x)}><span class="clst">${esc(ABBR[x.state] || x.state)}</span><span class="clbody"><b>${esc(x.state)} · ${esc(x.name)}</b>${x.kind === 'bill' ? billStatus(x) : '<span class="tagline t-yes">Law</span>'}
+          ${q.length ? q.slice(0, 2).map(qq => { const tt = unq(qq.text); return `<span class="clq">“${esc(tt.length > 220 ? tt.slice(0, 220) + '…' : tt)}”</span>`; }).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
+            : `<span class="clq noq"><span class="pb pb-none">No quote recorded</span> ${esc(x.does.length > 200 ? x.does.slice(0, 200) + '…' : x.does)}</span>`}</span></span></button>`; }).join('')}</div></section>`;
+  };
+  $('cmp-grid').innerHTML = head + `<div class="clforms">${forms.map(card).join('')}</div>`;
+  $('cmp-grid').querySelectorAll('[data-clp]').forEach(b => b.onclick = () => { S.prot = b.dataset.clp; saveHash(); renderCompareLaws(); });
+  $('cmp-grid').querySelectorAll('[data-clb]').forEach(b => b.onclick = () => { CLBILLS = b.dataset.clb === '1'; renderCompareLaws(); });
 }
 $('cmp-grid').addEventListener('click', e => { const b = e.target.closest('[data-cmpprot]'); if (b) { const [st, r] = b.dataset.cmpprot.split('|'); protDrawer(st, r); } });
 
