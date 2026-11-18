@@ -1,4 +1,5 @@
-/* Face Value app. Reads window.FRT_DATA from data.js.
+/* Face Value app. Reads window.FRT_DATA, loaded from data/live.json (or data/preview.json) by index.html.
+   The Google Sheet writes those files; see sheet/README.md.
    The legal logic (judge, ruleStatus, effective, computeCase) is carried over from the hackathon version. */
 (() => {
 const D = window.FRT_DATA;
@@ -46,6 +47,12 @@ const plainLimit = l => LIMIT[String(l).toLowerCase()] || l;
 const BILLSTEP = { 'Introduced': 'Introduced', 'Hearing held': 'Got a hearing', 'Committee vote': 'Committee vote',
   'Passed one chamber': 'Passed one chamber', 'Failed': 'Failed', 'Failed floor vote': 'Failed a full vote' };
 const LAWSTATUS = { 'Unchanged': 'In effect', 'New': 'New law', 'Amended': 'Updated' };
+/* Text the Google Sheet can edit (the config block of the data file). The values in this file are fallbacks. */
+const C = D.config || {};
+if (C.prot) Object.entries(C.prot).forEach(([k, v]) => { if (PROT[k]) Object.assign(PROT[k], v); });
+if (C.limits) Object.entries(C.limits).forEach(([k, v]) => { LIMIT[k] = v.text; });
+if (C.billSteps) Object.assign(BILLSTEP, C.billSteps);
+if (C.lawStatus) Object.assign(LAWSTATUS, C.lawStatus);
 
 const WHO = [['local', 'Local police', 'local police'], ['state', 'State police', 'state police'], ['federal', 'Federal agent', 'a federal agent, like the FBI or ICE']];
 const SRC = [['photo', 'Still photo', 'a still photo'], ['cctv', 'Security camera', 'security-camera footage'], ['drone', 'Drone', 'drone footage'], ['bodycam', 'Body camera', 'body-camera footage']];
@@ -90,6 +97,7 @@ const PRESETS = [
   { t: 'No law at all', s: { state: 'Ohio', who: 'local', src: 'cctv', db: 'mug', crime: 'minor' },
     d: 'Ohio has no law yet. Every step of the search is open.' }
 ];
+if (C.stories && C.stories.length) PRESETS.splice(0, PRESETS.length, ...C.stories.map(x => ({ t: x.t, d: x.d, s: { state: x.state, who: x.who, src: x.src, db: x.db, crime: x.crime } })));
 
 const GLOSS = {
   'face recognition': ['Face recognition', 'Software that compares a photo of a face to a collection of other photos and suggests who it might be. It can be wrong.'],
@@ -103,6 +111,7 @@ const GLOSS = {
   'bill': ['Bill', 'A proposed law. The bills here were introduced in state legislatures but have not become law.'],
   'unclear': ['Unclear', 'Our research flagged an open question about how this law should be counted. Each flagged law says what is unclear.']
 };
+if (C.glossary) Object.entries(C.glossary).forEach(([k, v]) => { GLOSS[k] = [v.term, v.def]; });
 const term = (key, text) => `<span class="term" role="button" tabindex="0" data-term="${esc(key)}" data-tip="${esc(GLOSS[key][1])}">${esc(text || GLOSS[key][0])}</span>`;
 
 /* ================= map ================= */
@@ -255,42 +264,41 @@ const hilite = (text, q) => {
   const words = q.split(/\s+/).filter(w => w.length > 1).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return words.length ? t.replace(new RegExp(`(${words.join('|')})`, 'gi'), '<mark>$1</mark>') : t;
 };
-/* Quote markup: bold the words that carry each protection, flag carve-outs as exceptions. */
-const KEYW = {
-  '1': /\b(court of competent jurisdiction|legal authorization|voluntary consent|from a third party|reasonable articulable suspicion|search warrants?|warrants?|court orders?|probable cause|neutral and detached magistrate|magistrate|judges?|subpoenas?)\b/gi,
-  '2': /\b(disclose[sd]?|disclosure|provided notice|notice|notif(?:y|ied|ication)|defendants?|prior to trial|discovery)\b/gi,
-  '3': /\b(commission of or the attempt to commit|mail theft|serious crimes?|felon(?:y|ies)|violent crimes?|crimes? of violence|punishable by a term of imprisonment of one year or more|one year or more)\b/gi,
-  '4': /\b(corroborating evidence|independently support probable cause|independently support|guide for further investigation|independent evidence|sole factor|sole support|independent of the use of facial recognition technology|lineup|live identification|photo array identification|probable cause|sole basis|without other evidence|other evidence|in conjunction with other lawfully obtained information|in conjunction with|positive identification)\b/gi,
-  '5': /\b(accuracy score of \d+ percent|accuracy|test(?:ed|ing|s)?|vendor test(?:ing)?|national institute of standards and technology|application programming interface)\b/gi,
-  '6': /\b(activity protected under the United States Constitution|mass surveillance|passersby|pedestrians|real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
-  '7': /\b(facial recognition operations group|supervisory role|only government entity|implicit bias training|training|trained employees?|trained|independently verified|independent visual comparison)\b/gi
-};
-const MODALW = /\b(may not|shall not|must not|is prohibited|are prohibited|prohibited|shall only|may only)\b/gi;
-const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^.;]{0,160}\bwarrant\b)|(?<!(?:may|shall|must) not[^.;]{0,160})without (?:a )?(?:search )?warrant|judicially recognized exception[^,;.]*|unless there is reasonable suspicion|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|incapacitated|sexual exploitation of children|notwithstanding(?! any (?:other )?(?:law|provision|rule))|do(?:es)? not apply(?![^.;]{0,160}\bwarrant\b)|warrant exceptions?|threat to human life)\b/gi;
+/* Quote marks, typed by editors in the sheet:
+   **word** = key words in bold, ((words)) = "Also allowed" carve-out, [[words]] = "Exception". */
+const MARKS = /\*\*([\s\S]+?)\*\*|\(\(([\s\S]+?)\)\)|\[\[([\s\S]+?)\]\]/g;
+const plainMarks = t => String(t ?? '').replace(MARKS, (m, a, b, c) => a ?? b ?? c);
 const XB = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Also allowed</span>`;
 const XE = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Exception</span>`;
 const XN = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Narrow</span>`;
-function markup(text, rule, q) {
-  const n = text.length, tag = new Uint8Array(n), sm = new Uint8Array(n);
-  const paint = (re, arr, v) => { re.lastIndex = 0; let m; while ((m = re.exec(text))) { if (!m[0].length) { re.lastIndex++; continue; } for (let i = m.index; i < m.index + m[0].length; i++) if (arr[i] < v) arr[i] = v; } };
-  (rule ? [rule] : Object.keys(KEYW)).forEach(r => paint(KEYW[r], tag, 1)); paint(MODALW, tag, 1); paint(EXCW, tag, 2);
-  if (q) { const w = q.split(/\s+/).filter(x => x.length > 1).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); if (w.length) paint(new RegExp(w.join('|'), 'gi'), sm, 1); }
-  let out = '', i = 0, flagged = false;
-  while (i < n) {
-    let j = i; while (j < n && tag[j] === tag[i] && sm[j] === sm[i]) j++;
-    let s = esc(text.slice(i, j)); if (sm[i]) s = `<mark>${s}</mark>`;
-    if (tag[i] === 1) s = `<b class="kw">${s}</b>`;
-    if (tag[i] === 2) { s = `<span class="exc">${s}</span>`; if (!flagged && (i === 0 || tag[i - 1] !== 2)) { let k = j; while (k < n && tag[k] === 2) k++; s = (/^(except|without|judicially|notwithstanding|do(es)? not apply)/i.test(text.slice(i, k)) ? XE : XB) + s; flagged = true; } }
+const curly = t => t.replace(/"([^"]*)"/g, '“$1”').replace(/^"/, '“').replace(/"/g, '”');
+// Render marked text. n = cut to about n visible characters (marks never split).
+function markup(text, q, n) {
+  const segs = []; let last = 0, m; MARKS.lastIndex = 0; text = String(text ?? '');
+  while ((m = MARKS.exec(text))) { if (m.index > last) segs.push([text.slice(last, m.index), 0]); segs.push(m[1] != null ? [m[1], 1] : m[2] != null ? [m[2], 2] : [m[3], 3]); last = MARKS.lastIndex; }
+  if (last < text.length) segs.push([text.slice(last), 0]);
+  let plain = segs.map(s => s[0]).join(''), tag = new Uint8Array(plain.length), p = 0, cut = false;
+  segs.forEach(([t, k]) => { tag.fill(k, p, p + t.length); p += t.length; });
+  if (n && plain.length > n) { plain = plain.slice(0, n).replace(/\s+\S*$/, ''); tag = tag.slice(0, plain.length); cut = true; }
+  plain = curly(plain);
+  const sm = new Uint8Array(plain.length);
+  if (q) { const w = q.split(/\s+/).filter(x => x.length > 1).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); if (w.length) { const re = new RegExp(w.join('|'), 'gi'); let mm; while ((mm = re.exec(plain))) { if (!mm[0].length) { re.lastIndex++; continue; } sm.fill(1, mm.index, mm.index + mm[0].length); } } }
+  let out = '', i = 0; const flagged = {};
+  while (i < plain.length) {
+    let j = i; while (j < plain.length && tag[j] === tag[i] && sm[j] === sm[i]) j++;
+    let s = esc(plain.slice(i, j)); if (sm[i]) s = `<mark>${s}</mark>`;
+    const k = tag[i];
+    if (k === 1) s = `<b class="kw">${s}</b>`;
+    if (k >= 2) { s = `<span class="exc">${s}</span>`; if (!flagged[k] && (i === 0 || tag[i - 1] !== k)) { s = (k === 3 ? XE : XB) + s; flagged[k] = true; } }
     out += s; i = j;
   }
-  return out;
+  return out + (cut ? '…' : '');
 }
 const qt = h => ('“' + h + '”').replace(/^“(<span class="xb">.*?<\/span>)/, '$1“');
-const curly = t => t.replace(/"([^"]*)"/g, '“$1”').replace(/^"/, '“').replace(/"/g, '”');
 // A quote that opens with our own lead-in ("the policy must address "…"") keeps its inner marks and gets no outer ones.
-const qbody = (t, rule, hl, n) => { const lead = !/^\s*["“]/.test(t); let x = lead ? String(t) : unq(t); if (n) x = clip(x, n); const h = markup(curly(x), rule, hl); return lead ? h : qt(h); };
+const qbody = (t, rule, hl, n) => { const lead = !/^\s*["“]/.test(plainMarks(t)); const x = lead ? String(t) : unq(t); const h = markup(x, hl, n); return lead ? h : qt(h); };
 const clip = (t, n) => t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
-const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qbody(q.text, q.rule, hl)}${q.rule ? `<span class="qprot" data-tip="${esc(PROT[q.rule].long)}">${img(PICON[q.rule], 18)}<span>${esc(PROT[q.rule].short)}</span></span>` : '<span class="qprot qrel"><span>Related text, not scored</span></span>'}</blockquote>`;
+const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(plainMarks(q.text)) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qbody(q.text, q.rule, hl)}${q.rule ? `<span class="qprot" data-tip="${esc(PROT[q.rule].long)}">${img(PICON[q.rule], 18)}<span>${esc(PROT[q.rule].short)}</span></span>` : '<span class="qprot qrel"><span>Related text, not scored</span></span>'}</blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}<svg class="ext" viewBox="0 0 8 8" width="10" height="10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 0h5v5H7V2L1 8 0 7l6-6H3z" fill="currentColor"/></svg><span class="sr-only">(opens in a new tab)</span></a>` : '';
 const protChips = (rules, limits = {}) => rules.length ? `<span class="pchips">${rules.map(r => `<span class="pb ${limits[r] ? 'pb-part' : 'pb-yes'}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${img(PICON[r], 18)}${esc(PROT[r].short)}${limits[r] ? '<i>limited</i>' : ''}</span>`).join('')}</span>` : '<span class="pchips"><span class="pb pb-none">None of the 7</span></span>';
@@ -573,6 +581,7 @@ const WHY = {
   arrest: 'Face recognition can point to the wrong person. Some states require other evidence before police can arrest someone or put them in a lineup.',
   disclose: 'If the person charged is never told face recognition was used, they cannot challenge a possible mistake in court.'
 };
+if (C.why) Object.assign(WHY, C.why);
 // The state's answer at this step, in one line.
 function answerBox(agg) {
   const st = esc(S.state);
@@ -779,9 +788,10 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-cmpl
 let CLBILLS = true, CLF = 'all';
 // How each limit changes the rule: narrow = covers fewer cases, weak = lower bar, loose = widens police use.
 const LTYPE = { 'adds offenses': 'loose', 'adds an offense': 'loose', 'probable cause, no court': 'weak', 'court order, lower standard': 'weak', 'fact of use': 'weak', 'via drone law': 'weak' };
+if (C.limits) Object.entries(C.limits).forEach(([k, v]) => { LTYPE[k] = v.type; });
 function limitsOf(x, r) {
   const raw = x.limits[r] || '', out = [];
-  if (raw) { const ty = LTYPE[raw.toLowerCase()] || 'narrow'; out.push({ ty, t: ty === 'loose' ? 'Would add more crimes police can use it for' : plainLimit(raw).replace(/^it /, '').replace(/^./, c => c.toUpperCase()) }); }
+  if (raw) { const ty = LTYPE[raw.toLowerCase()] || 'narrow'; out.push({ ty, t: plainLimit(raw).replace(/^it /, '').replace(/^./, c => c.toUpperCase()) }); }
   if (x.source && !/drone|body/i.test(raw)) out.push({ t: `Only covers ${SRC_FOR[x.source]}` });
   if (x.db) out.push({ t: "Only covers searches of driver's license photos" });
   if (!broad(x)) out.push({ t: `Only binds ${x.whoFor.map(w => WHO_FOR[w]).join(' and ')}` });
@@ -847,7 +857,7 @@ function renderLaws() {
   document.querySelectorAll('#ltabs [data-lt]').forEach(b => { b.setAttribute('aria-selected', b.dataset.lt === LT); b.tabIndex = b.dataset.lt === LT ? 0 : -1; });
   const def = LDEF[LT], q = $('l-q').value.trim().toLowerCase(), st = $('l-state').value, pr = $('l-prot').value, ss = $('l-status').value;
   let rows = def.rows().filter(r => (!st || r.state === st) && (!pr || (r.rules ? r.rules.includes(pr) : r.rule === pr)) && def.ok(r, ss) &&
-    (!q || q.split(/\s+/).every(w => JSON.stringify(r).toLowerCase().includes(w))));
+    (!q || q.split(/\s+/).every(w => plainMarks(JSON.stringify(r)).toLowerCase().includes(w))));
   rows = rows.slice().sort((a, b) => {
     const va = Array.isArray(a[LS.key]) ? a[LS.key].length : a[LS.key], vb = Array.isArray(b[LS.key]) ? b[LS.key].length : b[LS.key];
     return String(va).localeCompare(String(vb), undefined, { numeric: true }) * LS.dir;
@@ -880,6 +890,9 @@ addEventListener('popstate', () => {
   try { const h = new URLSearchParams(location.hash.slice(1)); KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); }); } catch (e) {}
   lastTab = S.tab; syncFilters(); setState(S.state); setTab(S.tab);
 });
+/* preview banner */
+if (window.FRT_PREVIEW) { const pb = document.createElement('div'); pb.className = 'previewbar'; pb.setAttribute('role', 'status');
+  pb.innerHTML = `<b>PREVIEW</b><span>Sheet edits from ${esc(new Date(D.updated || Date.now()).toLocaleString())}. Not live until someone presses Deploy.</span><a href="./">See the live site</a>`; document.body.prepend(pb); }
 /* ================= start ================= */
 syncFilters();
 setState(S.state, false);

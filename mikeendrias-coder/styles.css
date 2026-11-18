@@ -828,3 +828,11 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .prot.banrow { background: var(--lime); }
 .quote .qprot.qrel { border-color: var(--field); color: var(--slate); padding-left: 10px; }
 .cb.cb-na { background: #fff; color: var(--slate); box-shadow: inset 0 0 0 1.5px var(--rule-2); }
+
+/* ---------- sheet preview ---------- */
+.previewbar { position: fixed; left: 0; right: 0; top: var(--bar); height: var(--sub); z-index: 6; display: flex; align-items: center; gap: 12px; padding: 0 20px; white-space: nowrap; overflow: hidden; background: repeating-linear-gradient(135deg, #FFC94D 0 12px, #FFD873 12px 24px); color: var(--navy); font: 500 13px/1.3 var(--body); }
+.previewbar b { font: 400 13px/1 var(--px); letter-spacing: .06em; }
+.previewbar a { margin-left: auto; color: var(--navy); font-weight: 600; }
+.loadfail { margin: 20px; padding: 16px; background: #FDECEC; color: #8E1B12; border-radius: 12px; font: 500 15px var(--body); }
+@media (max-width: 560px) { .previewbar span { display: none; } }
+#sr-live { position: fixed; top: 0; left: 0; }
