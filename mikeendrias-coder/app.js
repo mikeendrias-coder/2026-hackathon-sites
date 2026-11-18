@@ -243,17 +243,18 @@ const hilite = (text, q) => {
 };
 /* Quote markup: bold the words that carry each protection, flag carve-outs as exceptions. */
 const KEYW = {
-  '1': /\b(search warrants?|warrants?|court orders?|probable cause|neutral and detached magistrate|magistrate|judges?|subpoenas?)\b/gi,
+  '1': /\b(court of competent jurisdiction|legal authorization|voluntary consent|from a third party|reasonable articulable suspicion|search warrants?|warrants?|court orders?|probable cause|neutral and detached magistrate|magistrate|judges?|subpoenas?)\b/gi,
   '2': /\b(disclose[sd]?|disclosure|provided notice|notice|notif(?:y|ied|ication)|defendants?|prior to trial|discovery)\b/gi,
-  '3': /\b(serious crimes?|felon(?:y|ies)|violent crimes?|crimes? of violence|punishable by a term of imprisonment of one year or more|one year or more)\b/gi,
-  '4': /\b(sole basis|without other evidence|other evidence|in conjunction with other lawfully obtained information|in conjunction with|positive identification)\b/gi,
+  '3': /\b(commission of or the attempt to commit|mail theft|serious crimes?|felon(?:y|ies)|violent crimes?|crimes? of violence|punishable by a term of imprisonment of one year or more|one year or more)\b/gi,
+  '4': /\b(corroborating evidence|independently support probable cause|independently support|guide for further investigation|independent evidence|sole factor|sole support|independent of the use of facial recognition technology|lineup|live identification|photo array identification|probable cause|sole basis|without other evidence|other evidence|in conjunction with other lawfully obtained information|in conjunction with|positive identification)\b/gi,
   '5': /\b(accuracy score of \d+ percent|accuracy|test(?:ed|ing|s)?|vendor test(?:ing)?|national institute of standards and technology|application programming interface)\b/gi,
-  '6': /\b(real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
-  '7': /\b(implicit bias training|training|trained employees?|trained|independently verified|independent visual comparison)\b/gi
+  '6': /\b(activity protected under the United States Constitution|reasonable suspicion|mass surveillance|passersby|pedestrians|real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
+  '7': /\b(facial recognition operations group|supervisory role|only government entity|implicit bias training|training|trained employees?|trained|independently verified|independent visual comparison)\b/gi
 };
 const MODALW = /\b(may not|shall not|must not|is prohibited|are prohibited|prohibited|shall only|may only)\b/gi;
-const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^,;.]{0,60}\bwarrant\b)|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|sexual exploitation of children|notwithstanding|do(?:es)? not apply|warrant exceptions?|threat to human life)\b/gi;
-const XB = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Exception</span>`;
+const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^,;.]{0,60}\bwarrant\b)|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|incapacitated|sexual exploitation of children|notwithstanding|do(?:es)? not apply|warrant exceptions?|threat to human life)\b/gi;
+const XB = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Also allowed</span>`;
+const XN = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Narrow</span>`;
 function markup(text, rule, q) {
   const n = text.length, tag = new Uint8Array(n), sm = new Uint8Array(n);
   const paint = (re, arr, v) => { re.lastIndex = 0; let m; while ((m = re.exec(text))) { if (!m[0].length) { re.lastIndex++; continue; } for (let i = m.index; i < m.index + m[0].length; i++) if (arr[i] < v) arr[i] = v; } };
@@ -271,7 +272,7 @@ function markup(text, rule, q) {
 }
 const qt = h => ('“' + h + '”').replace(/^“(<span class="xb">.*?<\/span>)/, '$1“');
 const clip = (t, n) => t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
-const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qt(markup(unq(q.text), q.rule, hl))}</blockquote>`;
+const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qt(markup(unq(q.text), q.rule, hl))}<span class="qprot" data-tip="${esc(PROT[q.rule].long)}">${img(PICON[q.rule], 18)}<span>${esc(PROT[q.rule].short)}</span></span></blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
 const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pb ${limits[r] ? 'pb-part' : 'pb-yes'}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${img(PICON[r], 18)}${esc(PROT[r].short)}${limits[r] ? '<i>limited</i>' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pb pb-none">None of the 7</span></div>';
@@ -753,7 +754,7 @@ function renderCompareLaws() {
       <div class="seg2" role="group" aria-label="Laws or bills"><button data-clb="1" aria-pressed="${CLBILLS}">Laws + bills</button><button data-clb="0" aria-pressed="${!CLBILLS}">Laws only</button></div></div></div>`;
   const card = x => {
     const q = qFor(x);
-    const lims = x.lims.map(l => `<span class="cllim${l.adds ? ' adds' : ''}">${l.adds ? '<span class="xb xb-add">+ Adds</span>' : l.weak ? '<span class="xb xb-weak">Weaker</span>' : XB}${esc(l.t)}</span>`).join('');
+    const lims = x.lims.map(l => `<span class="cllim${l.adds ? ' adds' : ''}">${l.adds ? '<span class="xb xb-add">+ Adds</span>' : l.weak ? '<span class="xb xb-weak">Weaker</span>' : XN}${esc(l.t)}</span>`).join('');
     const quotes = q.length ? q.slice(0, 2).map(qq => `<span class="clq">${qt(markup(clip(unq(qq.text), 240), r))}</span>`).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
       : `<span class="clq noq"><span class="pb pb-none">No quote recorded</span> ${esc(clip(x.does, 200))}</span>`;
     return `<button class="clitem ${x.kind}${x.exc ? ' isexc' : ''}" ${x.kind === 'law' ? lawRef(x) : billRef(x)}><span class="clst">${esc(ABBR[x.state] || x.state)}</span><span class="clbody"><span class="clname"><b>${esc(x.state)} · ${esc(x.name)}</b>${x.kind === 'bill' ? billStatus(x) : '<span class="tagline t-yes">Law</span>'}</span>${lims}${quotes}</span></button>`;

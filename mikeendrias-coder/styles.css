@@ -789,3 +789,8 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
   .clctl .seg2 { flex-wrap: nowrap; display: flex; }
   .clctl .seg2 button { flex: 1 1 auto; justify-content: center; font-size: 12.5px; padding: 6px 8px; gap: 5px; white-space: nowrap; }
 }
+
+/* which protection a quote backs */
+.quote .qprot { display: flex; width: fit-content; margin: var(--s3) 0 0 auto; align-items: center; gap: 6px; font: 500 12.5px/1 var(--body); font-style: normal; color: var(--navy); background: #fff; border: 1.5px solid var(--peri-ink); border-radius: 999px; padding: 3px 10px 3px 4px; min-height: 26px; box-sizing: border-box; }
+.quote .qprot img { width: 18px; height: 18px; }
+.quote .qprot span { text-box: trim-both cap alphabetic; }
