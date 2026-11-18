@@ -228,13 +228,13 @@
   </footer>
 </div>
 
-<script src="data.js"></script>
+<script src="../data.js"></script>
 <script>
 /* ---------------- configuration ---------------- */
-// Icons: emoji for now. To use a designed icon, set the value to a file path, e.g. 'icons/who-local.svg'.
+// Icons: emoji for now. To use a designed icon, set the value to a file path, e.g. '../icons/who-local.svg'.
 const ICONS = Object.fromEntries(['logo', 'who-local', 'who-state', 'who-federal', 'src-photo', 'src-cctv', 'src-drone', 'src-bodycam',
-  'db-dmv', 'db-mug', 'step-photo', 'step-crime', 'step-approval', 'step-search', 'step-match', 'step-trial'].map(k => [k, `icons/${k}.svg`]));
-ICONS['step-match'] = 'icons/step-arrest.svg';
+  'db-dmv', 'db-mug', 'step-photo', 'step-crime', 'step-approval', 'step-search', 'step-match', 'step-trial'].map(k => [k, `../icons/${k}.svg`]));
+ICONS['step-match'] = '../icons/step-arrest.svg';
 const WHO = [['local', 'Local police'], ['state', 'State police'], ['federal', 'Federal agent']];
 const SRC = [['photo', 'Still photo'], ['cctv', 'Security camera'], ['drone', 'Drone'], ['bodycam', 'Body camera']];
 const DB  = [['dmv', "Driver's license photos"], ['mug', 'Mugshots']];
