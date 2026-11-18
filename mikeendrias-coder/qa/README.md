@@ -3,7 +3,7 @@
 Runs 11 automated checks at 4 screen sizes (1440, 1280, 390 and 320 wide) on every tab, the drawer, the start screen and the result step:
 
 1. WCAG 2.2 AA scan (axe-core)
-2. Icon lined up with its text (tabs, buttons, rows, legend, step headers)
+2. Optical alignment: where the letters actually sit (from font metrics) against icons, rows and button boxes
 3. Info "i" centered in its circle
 4. Clipped or cut-off text
 5. Clickable things overlapping

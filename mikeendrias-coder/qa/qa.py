@@ -1,6 +1,5 @@
-"""Face Value QA: WCAG 2.2 AA (axe-core), icon alignment, clipped text, overlapping buttons,
-target size, minimum text size, broken images, reflow, keyboard focus, console errors.
-Run from this folder: see README.md."""
+"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment (text ink vs icons and boxes), clipped text,
+overlapping buttons, target size, minimum text size, broken images, reflow, keyboard focus, console errors."""
 import asyncio, json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 URL = os.environ.get('FV_URL', 'http://localhost:8765/index.html')
@@ -21,24 +20,47 @@ CHECKS = r"""
     const walk = n => { for (const c of n.childNodes) { if (skip && skip.contains(c)) continue; if (c.nodeType === 3 && c.textContent.trim()) { rg.selectNodeContents(c); for (const r of rg.getClientRects()) { if (!r.width) continue; box = box ? { t: Math.min(box.t, r.top), b: Math.max(box.b, r.bottom), l: Math.min(box.l, r.left), r: Math.max(box.r, r.right) } : { t: r.top, b: r.bottom, l: r.left, r: r.right }; } } else if (c.nodeType === 1 && getComputedStyle(c).display !== 'none' && !c.matches('.sr-only')) walk(c); } };
     walk(el); return box;
   };
+  // ink center of text: where the capital letters sit, from real font metrics
+  const cv = document.createElement('canvas').getContext('2d');
+  const inkRect = (el, skip) => {
+    let box = null; const rg = document.createRange();
+    const walk = n => { for (const c of n.childNodes) { if (skip && skip.contains(c)) continue;
+      if (c.nodeType === 3 && c.textContent.trim()) { const cs = getComputedStyle(c.parentElement); cv.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const H = cv.measureText('H'), fa = cv.measureText(c.textContent.trim());
+        rg.selectNodeContents(c); const rs = [...rg.getClientRects()].filter(r => r.width);
+        for (const r of rs) { const trimmed = /cap/.test(cs.textBoxEdge || '') || /trim/.test(cs.textBoxTrim || '');
+          const asc = H.fontBoundingBoxAscent, desc = H.fontBoundingBoxDescent; const content = asc + desc;
+          const base = r.top + (r.height - content) / 2 + asc;
+          const top = base - H.actualBoundingBoxAscent;
+          box = box ? { t: Math.min(box.t, top), b: Math.max(box.b, base) } : { t: top, b: base }; } }
+      else if (c.nodeType === 1 && getComputedStyle(c).display !== 'none' && !c.matches('.sr-only')) walk(c); } };
+    walk(el); return box;
+  };
   const groups = [
     ['.tab', 1.5], ['.pill', 1.5], ['.btn', 1.5], ['.legendcard > div:not(.hd)', 1.5], ['.prot', 3], ['.res', 3], ['.stephead', 3], ['.storybox', 3],
-    ['.cmpgrid button.cell', 1.5], ['.stories button', 3], ['.natfact .nf', 3], ['.wchoices button', 99], ['.chipbtn', 1.5], ['.howto > div', 3], ['.brand', 3]
+    ['.cb', 1.5], ['.pb', 1.5], ['.dhead h2', 1.5], ['.stories button', 3], ['.natfact .nf', 3], ['.wchoices button', 99], ['.chipbtn', 1.5], ['.howto > div', 3], ['.brand', 3]
   ];
   for (const [sel, tol] of groups) for (const el of document.querySelectorAll(sel)) {
     if (!vis(el)) continue;
     const ico = [...el.querySelectorAll('img.px, svg')].find(i => vis(i) && i.parentElement.closest(sel) === el && !i.closest('.arrow'));
     if (!ico) continue;
-    const t = textRect(el, ico.closest('.end') && el.matches('.prot') ? null : null); if (!t) continue;
+    const t = tol <= 1.5 ? inkRect(el) : textRect(el); if (!t) continue;
     const ir = ico.getBoundingClientRect(); const ic = (ir.top + ir.bottom) / 2, tc = (t.t + t.b) / 2;
     if (Math.abs(ic - tc) > tol) out.align.push(`${sel}: icon ${(ic - tc).toFixed(1)}px off text center in ${name(el)}`);
   }
   for (const b of document.querySelectorAll('.info, .i-wrap')) { if (!vis(b)) continue; const s = b.querySelector('svg').getBoundingClientRect(), r = b.getBoundingClientRect();
     const dx = (s.left + s.right) / 2 - (r.left + r.right) / 2, dy = (s.top + s.bottom) / 2 - (r.top + r.bottom) / 2;
     if (Math.abs(dx) > .6 || Math.abs(dy) > .6) out.align.push(`info i off center by ${dx.toFixed(1)},${dy.toFixed(1)} in ${name(b)}`); }
-  for (const row of document.querySelectorAll('.hd, .casehead, .ltabs + .info, .lcount')) { if (!vis(row)) continue; const kids = [...row.children].filter(vis); if (kids.length < 2) continue;
-    const c = kids.map(k => { const r = k.matches('.label,.question') ? textRect(k) : null; const b = r ? { t: r.t, b: k.matches('.question') ? r.t + 30 : r.b } : k.getBoundingClientRect(); return ((b.t ?? b.top) + (b.b ?? b.bottom)) / 2; });
+  for (const row of document.querySelectorAll('.hd, .casehead, .lcount, #v-state .scroll > div:first-child, .stepnav, .subbar, .bar .right, .cmpverdict, .ctxchip')) { if (!vis(row)) continue; const kids = [...row.children].filter(vis); if (kids.length < 2) continue;
+    const rs = kids.map(k => k.getBoundingClientRect()); if (Math.max(...rs.map(r => r.top)) > Math.min(...rs.map(r => r.bottom))) continue;
+    const c = kids.map(k => { const r = k.matches('.label,.question,.small,.muted,span') && !k.matches('.arrow,.count') ? (k.matches('.question') ? textRect(k) : inkRect(k)) : null; const b = r ? { t: r.t, b: k.matches('.question') ? r.t + 30 : r.b } : k.getBoundingClientRect(); return ((b.t ?? b.top) + (b.b ?? b.bottom)) / 2; });
     if (!row.matches('.casehead') && Math.max(...c) - Math.min(...c) > 1.5) out.align.push(`row items not centered (${(Math.max(...c) - Math.min(...c)).toFixed(1)}px) in ${name(row)}`); }
+  for (const el of document.querySelectorAll('.btn, .pill, .copy, .chipbtn, .tagline, .tab, .bnav button, .count, .ltabs button, .seg2 button, .sb-main, .label.dot, .stamp, .bubble')) {
+    if (!vis(el)) continue; const k = inkRect(el); if (!k) continue; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
+    const bt = parseFloat(cs.borderTopWidth) || 0, bb = parseFloat(cs.borderBottomWidth) || 0;
+    const mid = el.matches('.bnav button') ? null : (r.top + bt + r.bottom - bb) / 2;
+    if (mid !== null && Math.abs((k.t + k.b) / 2 - mid) > 1) out.align.push(`text not centered in its box (${((k.t + k.b) / 2 - mid).toFixed(1)}px): ${name(el)}`);
+  }
   for (const el of document.querySelectorAll('body *')) {
     if (!vis(el) || el.closest('.scroll, .ltable, .tiles, .sky, .wscene, .track')) continue;
     const cs = getComputedStyle(el);

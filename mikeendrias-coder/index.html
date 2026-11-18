@@ -37,7 +37,7 @@
   <!-- map column (desktop) -->
   <aside class="mapcol" aria-label="Pick a state">
     <div class="card mapcard">
-      <div class="hd"><span class="label dot">Pick a state</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+      <div class="hd"><span class="label dot">Pick a state on the map</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div class="tiles" id="tiles" role="group" aria-label="States"></div>
       <div class="mlegend" id="mlegend"></div>
       <label class="sr-only" for="state-pick">State</label>
@@ -49,7 +49,7 @@
       <span class="arrow" aria-hidden="true">→</span>
     </button>
     <div class="card legendcard" aria-label="How to read the symbols">
-      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read it</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">Reading the shields</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
       <div><img class="px" src="icons/shield-yes.svg" alt=""><span class="tagline t-yes">Yes</span>Protected by state law</div>
       <div><img class="px" src="icons/shield-part.svg" alt=""><span class="tagline t-part">Partly</span>Only sometimes, or unclear</div>
       <div><img class="px" src="icons/shield-no.svg" alt=""><span class="tagline t-no">No</span>Not protected</div>
@@ -96,7 +96,7 @@
     </div>
     <div class="scroll" style="flex:1;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
-        <span class="label">The 7 protections we check</span>
+        <h2 class="sechead" id="s-sechead">What stands between people here and a face scan</h2>
         <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
         <span class="small muted tapnote" style="margin-left:auto">Tap one to read the law</span>
       </div>
@@ -134,13 +134,8 @@
   <!-- COMPARE -->
   <section class="view card" id="v-compare" role="tabpanel" aria-labelledby="tab-compare" tabindex="-1">
     <div class="cmpwrap scroll">
-      <div class="cmphead">
-        <label><span class="label">State A</span><select class="select" id="cmp-a" style="margin-top:6px"></select></label>
-        <span class="vs">VS</span>
-        <label><span class="label">State B</span><select class="select" id="cmp-b" style="margin-top:6px"></select></label>
-      </div>
       <div class="ctxchip" id="cmp-ctx"></div>
-      <div class="cmpgrid" id="cmp-grid"></div>
+      <div id="cmp-grid"></div>
     </div>
   </section>
 
