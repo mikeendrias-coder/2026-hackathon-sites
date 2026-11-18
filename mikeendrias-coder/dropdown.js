@@ -61,7 +61,9 @@
 
   function place() {
     if (!open) return;
-    const r = open.anchor.getBoundingClientRect();
+    // Match the frame that is drawn: filter boxes draw it inside their divider border, buttons draw it as their border.
+    const R = open.anchor.getBoundingClientRect(), inner = open.anchor.matches('.seg');
+    const r = inner ? { left: R.left + open.anchor.clientLeft, top: R.top, bottom: R.bottom, width: open.anchor.clientWidth } : R;
     const w = r.width;
     pop.style.width = w + 'px';
     const below = innerHeight - r.bottom - 12, above = r.top - 12;

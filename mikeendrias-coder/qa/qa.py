@@ -122,9 +122,10 @@ async def motion_and_dropdown(b):
   await pg.goto(URL + '#tab=case&state=Maryland'); await pg.wait_for_timeout(700)
   for k in range(5):
     btns = await pg.query_selector_all('.fbar .dd-btn'); await btns[k].click(); await pg.wait_for_timeout(250)
-    d = await pg.evaluate("""() => { const p = document.querySelector('.dd-pop'); const a = document.querySelector('.dd-anchor'); if (!p || p.hidden || !a) return 'no popup'; const pr = p.getBoundingClientRect(), ar = a.getBoundingClientRect();
-      return { dl: +(pr.left - ar.left).toFixed(1), dw: +(pr.width - ar.width).toFixed(1), gap: +(pr.top - ar.bottom).toFixed(1) }; }""")
-    if d == 'no popup' or abs(d['dl']) > 0.6 or abs(d['dw']) > 0.6 or not (-3 <= d['gap'] <= 0.5): bad.append(f'dropdown {k} not continuous with its box: {d}')
+    d = await pg.evaluate("""() => { const p = document.querySelector('.dd-pop'); const a = document.querySelector('.dd-anchor'); if (!p || p.hidden || !a) return 'no popup'; const pr = p.getBoundingClientRect(), R = a.getBoundingClientRect(); const inner = a.matches('.seg');
+      const ar = { left: R.left + (inner ? a.clientLeft : 0), width: inner ? a.clientWidth : R.width, bottom: R.bottom };
+      return { dl: +(pr.left - ar.left).toFixed(2), dw: +(pr.width - ar.width).toFixed(2), gap: +(pr.top - ar.bottom).toFixed(1) }; }""")
+    if d == 'no popup' or abs(d['dl']) > 0.25 or abs(d['dw']) > 0.25 or not (-3 <= d['gap'] <= 0.5): bad.append(f'dropdown {k} not continuous with its box: {d}')
     await pg.keyboard.press('Escape'); await pg.wait_for_timeout(150)
   await ctx.close()
   return bad
