@@ -45,7 +45,7 @@ const LIMIT = {
 const plainLimit = l => LIMIT[String(l).toLowerCase()] || l;
 const BILLSTEP = { 'Introduced': 'Introduced', 'Hearing held': 'Got a hearing', 'Committee vote': 'Committee vote',
   'Passed one chamber': 'Passed one chamber', 'Failed': 'Failed', 'Failed floor vote': 'Failed a full vote' };
-const LAWSTATUS = { 'Unchanged': 'In effect', 'New': 'New this year', 'Amended': 'Changed this year' };
+const LAWSTATUS = { 'Unchanged': 'In effect', 'New': 'New law', 'Amended': 'Updated' };
 
 const WHO = [['local', 'Local police', 'local police'], ['state', 'State police', 'state police'], ['federal', 'Federal agent', 'a federal agent, like the FBI or ICE']];
 const SRC = [['photo', 'Still photo', 'a still photo'], ['cctv', 'Security camera', 'security-camera footage'], ['drone', 'Drone', 'drone footage'], ['bodycam', 'Body camera', 'body-camera footage']];
@@ -143,7 +143,9 @@ if (!D.states.some(s => s.name === S.state)) S.state = 'Maryland';
 if (!['home', 'state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'home';
 if (!['states', 'laws'].includes(S.cmode)) S.cmode = 'states'; if (!PROT[S.prot]) S.prot = '1';
 if (!find(WHO, S.who)) S.who = 'local'; if (!find(SRC, S.src)) S.src = 'photo'; if (!find(DB, S.db)) S.db = 'dmv'; if (!find(CRIME, S.crime)) S.crime = 'serious';
-const saveHash = () => { try { history.replaceState(null, '', '#' + new URLSearchParams(Object.fromEntries(KEYS.map(k => [k, S[k]])))); } catch (e) {} };
+const say = t => { const el = $('sr-live'); if (el) { el.textContent = ''; setTimeout(() => el.textContent = t, 30); } };
+let lastTab = S.tab;
+const saveHash = () => { try { const h = '#' + new URLSearchParams(Object.fromEntries(KEYS.map(k => [k, S[k]]))); if (S.tab !== lastTab) history.pushState(null, '', h); else history.replaceState(null, '', h); lastTab = S.tab; } catch (e) {} };
 
 /* ================= the legal logic (from v1) ================= */
 const WHO_FOR = { local: 'local police', state: 'state agencies', any: 'anyone' };
@@ -209,6 +211,7 @@ function computeCase(state, ctx) {
 
 /* ================= drawer ================= */
 let lastFocus = null, kbd = false;
+let READY = false;
 document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key.startsWith('Arrow') || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') kbd = true; }, true);
 document.addEventListener('pointerdown', () => { kbd = false; }, true);
 function openDrawer(kicker, title, html, icon) {
@@ -248,12 +251,13 @@ const KEYW = {
   '3': /\b(commission of or the attempt to commit|mail theft|serious crimes?|felon(?:y|ies)|violent crimes?|crimes? of violence|punishable by a term of imprisonment of one year or more|one year or more)\b/gi,
   '4': /\b(corroborating evidence|independently support probable cause|independently support|guide for further investigation|independent evidence|sole factor|sole support|independent of the use of facial recognition technology|lineup|live identification|photo array identification|probable cause|sole basis|without other evidence|other evidence|in conjunction with other lawfully obtained information|in conjunction with|positive identification)\b/gi,
   '5': /\b(accuracy score of \d+ percent|accuracy|test(?:ed|ing|s)?|vendor test(?:ing)?|national institute of standards and technology|application programming interface)\b/gi,
-  '6': /\b(activity protected under the United States Constitution|reasonable suspicion|mass surveillance|passersby|pedestrians|real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
+  '6': /\b(activity protected under the United States Constitution|mass surveillance|passersby|pedestrians|real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
   '7': /\b(facial recognition operations group|supervisory role|only government entity|implicit bias training|training|trained employees?|trained|independently verified|independent visual comparison)\b/gi
 };
 const MODALW = /\b(may not|shall not|must not|is prohibited|are prohibited|prohibited|shall only|may only)\b/gi;
-const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^,;.]{0,60}\bwarrant\b)|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|incapacitated|sexual exploitation of children|notwithstanding|do(?:es)? not apply|warrant exceptions?|threat to human life)\b/gi;
+const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^.;]{0,160}\bwarrant\b)|(?<!(?:may|shall|must) not[^.;]{0,160})without (?:a )?(?:search )?warrant|judicially recognized exception[^,;.]*|unless there is reasonable suspicion|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|incapacitated|sexual exploitation of children|notwithstanding(?! any (?:other )?(?:law|provision|rule))|do(?:es)? not apply(?![^.;]{0,160}\bwarrant\b)|warrant exceptions?|threat to human life)\b/gi;
 const XB = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Also allowed</span>`;
+const XE = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Exception</span>`;
 const XN = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Narrow</span>`;
 function markup(text, rule, q) {
   const n = text.length, tag = new Uint8Array(n), sm = new Uint8Array(n);
@@ -265,17 +269,20 @@ function markup(text, rule, q) {
     let j = i; while (j < n && tag[j] === tag[i] && sm[j] === sm[i]) j++;
     let s = esc(text.slice(i, j)); if (sm[i]) s = `<mark>${s}</mark>`;
     if (tag[i] === 1) s = `<b class="kw">${s}</b>`;
-    if (tag[i] === 2) { s = `<span class="exc">${s}</span>`; if (!flagged && (i === 0 || tag[i - 1] !== 2)) { s = XB + s; flagged = true; } }
+    if (tag[i] === 2) { s = `<span class="exc">${s}</span>`; if (!flagged && (i === 0 || tag[i - 1] !== 2)) { let k = j; while (k < n && tag[k] === 2) k++; s = (/^(except|without|judicially|notwithstanding|do(es)? not apply)/i.test(text.slice(i, k)) ? XE : XB) + s; flagged = true; } }
     out += s; i = j;
   }
   return out;
 }
 const qt = h => ('“' + h + '”').replace(/^“(<span class="xb">.*?<\/span>)/, '$1“');
+const curly = t => t.replace(/"([^"]*)"/g, '“$1”').replace(/^"/, '“').replace(/"/g, '”');
+// A quote that opens with our own lead-in ("the policy must address "…"") keeps its inner marks and gets no outer ones.
+const qbody = (t, rule, hl, n) => { const lead = !/^\s*["“]/.test(t); let x = lead ? String(t) : unq(t); if (n) x = clip(x, n); const h = markup(curly(x), rule, hl); return lead ? h : qt(h); };
 const clip = (t, n) => t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
-const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qt(markup(unq(q.text), q.rule, hl))}<span class="qprot" data-tip="${esc(PROT[q.rule].long)}">${img(PICON[q.rule], 18)}<span>${esc(PROT[q.rule].short)}</span></span></blockquote>`;
+const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qbody(q.text, q.rule, hl)}<span class="qprot" data-tip="${esc(PROT[q.rule].long)}">${img(PICON[q.rule], 18)}<span>${esc(PROT[q.rule].short)}</span></span></blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
-const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
-const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pb ${limits[r] ? 'pb-part' : 'pb-yes'}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${img(PICON[r], 18)}${esc(PROT[r].short)}${limits[r] ? '<i>limited</i>' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pb pb-none">None of the 7</span></div>';
+const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}<svg class="ext" viewBox="0 0 8 8" width="10" height="10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 0h5v5H7V2L1 8 0 7l6-6H3z" fill="currentColor"/></svg><span class="sr-only">(opens in a new tab)</span></a>` : '';
+const protChips = (rules, limits = {}) => rules.length ? `<span class="pchips">${rules.map(r => `<span class="pb ${limits[r] ? 'pb-part' : 'pb-yes'}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${img(PICON[r], 18)}${esc(PROT[r].short)}${limits[r] ? '<i>limited</i>' : ''}</span>`).join('')}</span>` : '<span class="pchips"><span class="pb pb-none">None of the 7</span></span>';
 // How a bill compares with the state's current law, protection by protection.
 function billImpact(b) {
   const rows = b.rules.map(r => {
@@ -287,9 +294,9 @@ function billImpact(b) {
   const WORD = { add: ['+', 'Adds'], up: ['↑', 'Strengthens'], same: ['=', 'Already partly law'], have: ['=', 'Already law'] };
   const head = !rows.length ? `<span class="impact none">Adds none of the 7 protections</span>`
     : `<span class="impact">${n('add') ? `<b class="ia">+${n('add')}</b> new` : ''}${n('up') ? `${n('add') ? ' · ' : ''}<b class="iu">↑${n('up')}</b> stronger` : ''}${!n('add') && !n('up') ? '<b class="ih">=</b> Nothing beyond current law' : n('have') + n('same') ? ` · ${n('have') + n('same')} already law` : ''}</span>`;
-  const badges = rows.length ? `<div class="pchips">${rows.sort((x, y) => 'addupsamehave'.indexOf(x.k) - 'addupsamehave'.indexOf(y.k)).map(x =>
-    `<span class="pb pb-${x.k}" data-tip="${esc(`${WORD[x.k][1]}: ${PROT[x.r].long}${x.lim ? ' Limited: ' + plainLimit(x.lim) + '.' : ''}`)}"><em>${WORD[x.k][0]}</em>${img(PICON[x.r], 18)}${esc(PROT[x.r].short)}${x.lim ? '<i>limited</i>' : ''}</span>`).join('')}</div>` : '';
-  return `<div class="bimpact">${head}${badges}</div>`;
+  const badges = rows.length ? `<span class="pchips">${rows.sort((x, y) => 'addupsamehave'.indexOf(x.k) - 'addupsamehave'.indexOf(y.k)).map(x =>
+    `<span class="pb pb-${x.k}" data-tip="${esc(`${WORD[x.k][1]}: ${PROT[x.r].long}${x.lim ? ' Limited: ' + plainLimit(x.lim) + '.' : ''}`)}"><em>${WORD[x.k][0]}</em>${img(PICON[x.r], 18)}${esc(PROT[x.r].short)}${x.lim ? '<i>limited</i>' : ''}</span>`).join('')}</span>` : '';
+  return `<span class="bimpact">${head}${badges}</span>`;
 }
 const billItem = b => `<button ${billRef(b)}><span><b>${esc(b.name)}</b> ${billStatus(b)}${billImpact(b)}<span class="small muted bdesc">${esc(b.does)}</span></span><span class="arrow">→</span></button>`;
 const billStatus = b => `<span class="tagline t-neutral">${esc(BILLSTEP[b.step] || b.step)} · ${esc(b.year)}</span>`;
@@ -348,7 +355,7 @@ function protDrawer(state, rule) {
     ${stateGroups(rule)}`, PICON[rule]);
 }
 const INFO = {
-  map: ['The map', 'Darker means more protection', () => `<p>Each square is a state. The darker the square, the more of the 7 protections that state's laws include, in full or in part.</p>${legendHTML(true)}<p class="small muted">Click a state to see its scorecard, or to follow a case there.</p>`, 'pin'],
+  map: ['The map', 'Darker means more protection', () => `<p>Each square is a state. The darker the square, the more of the 7 protections that state's laws include, in full or in part.</p>${legendHTML(true)}<p class="small muted">Select a state to see its scorecard, or to follow a case there.</p>`, 'pin'],
   protections: ['The basics', 'Seven rules that can rein in police face recognition', () => `<p>Police can run a photo of an unknown person through software that compares it to millions of faces. Some states put limits on that. We check every state for these seven common ones:</p><div class="glist">${PORDER.map((r, i) => `<div style="display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:center">${img(PICON[r], 36)}<span><dt>${i + 1}. ${esc(PROT[r].short)}</dt><dd>${esc(PROT[r].long)}</dd></span></div>`).join('')}</div>`, 'shield-full'],
   gates: ['How to read it', 'Shields, gates and what they mean', () => `<p>Shields show whether state law protects people. On the case road, the same colors appear as gates the search has to get past.</p><div class="howto">
     <div>${img('shield-yes', 36)}<span><b>Protected</b> <span class="tagline t-yes">Yes</span><br>A state law protects people here. On the road: a closed gate.</span></div>
@@ -356,7 +363,7 @@ const INFO = {
     <div>${img('shield-no', 36)}<span><b>Not protected</b> <span class="tagline t-no">No</span><br>No state law steps in, or the law that exists doesn't reach this situation. On the road: two red posts, nothing in between.</span></div>
     <div>${img('gate-would', 36)}<span><b>Would be protected</b> <span class="tagline t-would">What if</span><br>Shown only when you try a "what if" on the Result step.</span></div></div>
     <p class="small muted">Where a state has no rule, the U.S. Constitution's basic limits on searches and arrests still apply. "Not protected" means no extra protection from state law.</p>`, 'shield-yes'],
-  laws: ['The data', 'Where every line here comes from', () => `<p>Every law, bill and quote here comes from CDT's research memo on state facial recognition laws. ${esc(D.source)}</p><p>Laws marked ${term('unclear')} have open questions about how they should be counted.</p><p class="small muted">Tap any row to read the exact wording and open the official text.</p>`, 'law'],
+  laws: ['The data', 'Where every line here comes from', () => `<p>Every law, bill and quote here comes from CDT's research memo on state facial recognition laws. ${esc(D.source)}</p><p>Laws marked ${term('unclear')} have open questions about how they should be counted.</p><p class="small muted">Select any row to read the exact wording and open the official text.</p>`, 'law'],
 };
 const legendHTML = big => `<div class="mlegend"${big ? ' style="font-size:14px"' : ''}>
   <span><i class="sw" style="background:var(--navy)"></i>5 to 7</span><span><i class="sw" style="background:var(--peri)"></i>3 to 4</span>
@@ -376,7 +383,7 @@ function aboutDrawer() {
     <p class="small">Made by Michael Endrias (Intern). <a href="archive/index.html">Original hackathon version</a></p></div>`, 'logo');
 }
 function storiesDrawer() {
-  openDrawer('Follow a case', 'Start with a story', `<p class="muted">Each story loads a real situation. Then change anything you like.</p><div class="stories">${PRESETS.map((p, i) =>
+  openDrawer('Follow a case', 'Start with a story', `<p class="muted">Each story is a made-up case built on real state laws. Load one, then change anything you like.</p><div class="stories">${PRESETS.map((p, i) =>
     `<button data-preset="${i}">${img('who-' + p.s.who, 36)}<span><b>${esc(p.t)}</b><span class="small muted">${esc(p.d)}</span></span></button>`).join('')}</div>`, 'step-photo');
 }
 
@@ -392,7 +399,7 @@ document.addEventListener('click', e => {
   else if (t.dataset.preset) { closeDrawer(); loadPreset(+t.dataset.preset); }
   else if (t.dataset.open === 'stories') storiesDrawer();
   else if (t.dataset.open === 'about') aboutDrawer();
-  else if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => { t.textContent = 'Copied'; t.setAttribute('aria-live', 'polite'); setTimeout(() => t.textContent = 'Copy', 1400); }).catch(() => {}); }
+  else if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => { t.textContent = 'Copied'; say('Copied to clipboard'); setTimeout(() => t.textContent = 'Copy', 1400); }).catch(() => {}); }
   else if (t.dataset.go) setTab(t.dataset.go);
   else if (t.dataset.goto) { closeDrawer(); if (t.dataset.st) setState(t.dataset.st, false); setTab(t.dataset.goto); }
 });
@@ -414,11 +421,15 @@ function showTip(el) {
 }
 function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tipFor = null; tip.classList.remove('on'); tip.removeAttribute('role'); tip.setAttribute('aria-hidden', 'true'); }
 const canHover = matchMedia('(hover: hover)').matches;
-document.addEventListener('mouseover', e => { if (!canHover) return; const el = e.target.closest('[data-tip]'); if (el && el !== tipFor) showTip(el); else if (!el && tipFor) hideTip(); });
+let tipHide = 0;
+document.addEventListener('mouseover', e => { if (!canHover) return; if (e.target.closest('#tip')) { clearTimeout(tipHide); return; } const el = e.target.closest('[data-tip]'); clearTimeout(tipHide);
+  if (el && el !== tipFor) showTip(el); else if (!el && tipFor) tipHide = setTimeout(hideTip, 200); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tipFor) { hideTip(); e.stopPropagation(); e.preventDefault(); } }, true);
+let lastPtr = 'mouse'; document.addEventListener('pointerdown', e => { lastPtr = e.pointerType; }, true);
 document.addEventListener('focusin', e => { const el = e.target.closest('[data-tip]'); if (el && e.target.matches(':focus-visible')) showTip(el); });
 document.addEventListener('focusout', hideTip);
 document.addEventListener('scroll', hideTip, true);
-document.addEventListener('click', hideTip);
+document.addEventListener('click', e => { hideTip(); if (lastPtr !== 'touch') return; const el = e.target.closest('[data-tip]'); if (el && !el.closest('button:not([data-tip]),a') && !el.matches('button,a')) setTimeout(() => showTip(el), 0); });
 $('open-stories').onclick = storiesDrawer;
 
 /* ================= tabs ================= */
@@ -432,6 +443,7 @@ function setTab(tab) {
   if (tab === 'laws') renderLaws();
   if (tab === 'case') go(S.step, false);
   saveHash();
+  const ae = document.activeElement; if (READY && kbd && (!ae || ae === document.body || !ae.closest('[role=tablist],#v-' + tab))) $('v-' + tab).focus({ preventScroll: true });
 }
 document.querySelectorAll('[role=tab][data-tab]').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 const TABS = ['state', 'case', 'compare', 'laws'];
@@ -443,8 +455,8 @@ document.querySelectorAll('[role=tablist]').forEach(list => list.addEventListene
 }));
 /* motion switch: pauses every animation on the page */
 let still = false; try { still = localStorage.getItem('fv-still') === '1'; } catch (e) {}
-if (reduced) still = true;
-function setMotion(v) { still = v; document.body.classList.toggle('still', v); $('motion').setAttribute('aria-pressed', v); $('motion-t').textContent = v ? 'Play motion' : 'Pause motion'; $('motion-sr').textContent = v ? 'Animation is paused' : 'Pause all animation'; try { localStorage.setItem('fv-still', v ? '1' : '0'); } catch (e) {} }
+try { if (reduced && localStorage.getItem('fv-still') === null) still = true; } catch (e) { if (reduced) still = true; }
+function setMotion(v) { still = v; document.body.classList.toggle('still', v); $('motion-t').textContent = v ? 'Play motion' : 'Pause motion'; $('motion').setAttribute('aria-label', v ? 'Play motion' : 'Pause motion'); try { localStorage.setItem('fv-still', v ? '1' : '0'); } catch (e) {} }
 $('motion').onclick = () => setMotion(!still); setMotion(still);
 
 /* ================= state picking ================= */
@@ -458,13 +470,23 @@ D.states.forEach(s => {
   tiles.appendChild(b);
 });
 $('mlegend').outerHTML = legendHTML(false);
+tiles.addEventListener('keydown', e => {
+  const t = e.target.closest('.tile'); if (!t || !/^Arrow|^Home$|^End$/.test(e.key)) return;
+  const all = [...tiles.querySelectorAll('.tile')], pos = b => [+b.style.gridColumn, +b.style.gridRow], [x, y] = pos(t);
+  let best = null, bd = 1e9;
+  if (e.key === 'Home') best = all[0]; else if (e.key === 'End') best = all[all.length - 1];
+  else all.forEach(b => { if (b === t) return; const [bx, by] = pos(b), dx = bx - x, dy = by - y;
+    const ok = e.key === 'ArrowRight' ? dx > 0 : e.key === 'ArrowLeft' ? dx < 0 : e.key === 'ArrowDown' ? dy > 0 : dy < 0; if (!ok) return;
+    const d = /Right|Left/.test(e.key) ? Math.abs(dx) + Math.abs(dy) * 3 : Math.abs(dy) + Math.abs(dx) * 3; if (d < bd) { bd = d; best = b; } });
+  if (best) { e.preventDefault(); all.forEach(b => b.tabIndex = -1); best.tabIndex = 0; best.focus(); }
+});
 tiles.onclick = e => { const b = e.target.closest('.tile'); if (b) setState(b.dataset.state); };
 $('state-pick').onchange = e => setState(e.target.value);
 document.querySelectorAll('[data-statepick]').forEach(s => s.onchange = e => setState(e.target.value));
 
 function setState(name, rerender = true) {
-  S.state = name; S.whatif = 'none';
-  tiles.querySelectorAll('.tile').forEach(t => { const on = t.dataset.state === name; t.classList.toggle('sel', on); t.setAttribute('aria-pressed', on); const p = t.querySelector('.pin'); if (on && !p) t.insertAdjacentHTML('beforeend', img('pin', 22, 'pin')); if (!on && p) p.remove(); });
+  S.state = name; S.whatif = 'none'; if (READY) say(`${name}: ${protCount(name)} of 7 protections`);
+  tiles.querySelectorAll('.tile').forEach(t => { const on = t.dataset.state === name; t.classList.toggle('sel', on); t.setAttribute('aria-pressed', on); t.tabIndex = on ? 0 : -1; const p = t.querySelector('.pin'); if (p) p.remove(); });
   $('state-pick').innerHTML = stateOpts(name);
   document.querySelectorAll('[data-statepick]').forEach(s => s.innerHTML = stateOpts(name));
   renderState(); restartCase(rerender && S.tab === 'case');
@@ -483,10 +505,10 @@ function renderState() {
   $('s-sechead').innerHTML = `What stands between people in ${esc(st)} and a face scan`;
   const levels = PORDER.map(r => stateProt(st, r).level);
   $('s-hud').innerHTML = `<div class="top"><span class="pxf">PROTECTION METER</span>${img('capitol', 34)}</div>
-    <div class="shields" role="img" aria-label="${n} of 7 protections">${levels.map((l, i) => `<img class="px" src="${IC(LV[l][0])}" alt="" tabindex="0" data-tip="${esc(PROT[PORDER[i]].short)}: ${LV[l][1]}" style="animation-delay:${i * 70}ms">`).join('')}</div>
+    <ul class="sr-only">${levels.map((l, i) => `<li>${esc(PROT[PORDER[i]].short)}: ${LV[l][1]}</li>`).join('')}</ul><div class="shields" aria-hidden="true">${levels.map((l, i) => `<img class="px" src="${IC(LV[l][0])}" alt="" data-tip="${esc(PROT[PORDER[i]].short)}: ${LV[l][1]}" style="animation-delay:${i * 70}ms">`).join('')}</div>
     <div class="score"><b>${n}/7</b><span>${g === 'none' ? 'No face recognition law' : g === 'zero' ? 'Has a law, but none of the 7' : n > nFull ? `${nFull} full, ${n - nFull} partial` : 'All in full'}</span></div>`;
   $('s-sum').innerHTML = g === 'none'
-    ? `${esc(st)} has no law about police ${term('face recognition', 'face recognition')}. It's one of ${counts.none} states with no law.${billsHere.length ? ` Lawmakers have introduced ${billsHere.length} ${term('bill', billsHere.length > 1 ? 'bills' : 'bill')} on it.` : ''}`
+    ? `${esc(st)} has no law about police ${term('face recognition', 'face recognition')}. It's one of ${counts.none} places (${counts.none - 1} states and DC) with no law.${billsHere.length ? ` Lawmakers have introduced ${billsHere.length} ${term('bill', billsHere.length > 1 ? 'bills' : 'bill')} on it.` : ''}`
     : g === 'zero'
     ? `${esc(st)} has a face recognition law, but it doesn't add any of the 7 common protections. ${esc(lawsHere.map(l => l.does).join(' '))}`
     : `${esc(st)} has ${lawsHere.length === 1 ? 'one law' : lawsHere.length + ' laws'} on police face recognition. ${nFull ? `${nFull} protection${nFull > 1 ? 's apply' : ' applies'} in full` : 'None apply in full'}${n > nFull ? `, and ${n - nFull} only in some situations` : ''}.`;
@@ -498,7 +520,7 @@ function renderState() {
     return `<button class="prot" data-prot="${r}">${img(PICON[r], 44)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
       <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} proposed` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 44)}<span><b>Bills in ${esc(st)}</b>
-      <span class="st">${billsHere.length ? `Proposed laws on face recognition. Tap to read ${billsHere.length > 1 ? 'them' : 'it'}.` : 'No bills recorded in this research'}</span></span><span class="end"><span class="count${billsHere.length ? '' : ' zero'}" aria-label="${billsHere.length} bills">${billsHere.length}</span><span class="arrow" aria-hidden="true">→</span></span></button>`;
+      <span class="st">${billsHere.length ? `Proposed laws on face recognition. Select to read ${billsHere.length > 1 ? 'them' : 'it'}.` : 'No bills recorded in this research'}</span></span><span class="end"><span class="count${billsHere.length ? '' : ' zero'}" aria-label="${billsHere.length} bills">${billsHere.length}</span><span class="arrow" aria-hidden="true">→</span></span></button>`;
   const other = lawsHere.filter(l => !l.rules.length);
   $('s-foot').innerHTML = `
     ${other.length ? `<button class="chipbtn" id="s-other"><span class="count sm">${other.length}</span>Other face recognition law${other.length > 1 ? 's' : ''}</button>` : ''}
@@ -597,14 +619,15 @@ function verdictHTML() {
   const n = k => all.filter(r => r.status === k).length;
   const gaps = CASE.steps.flatMap(s => s.agg === 'skip' ? [] : s.results.filter(r => ['gap', 'bypassed', 'partial', 'review'].includes(r.status)).map(r => ({ r, s })));
   const stars = k => `<span class="sparkles" aria-hidden="true">${img('star', 20).repeat(k)}</span>`;
+  const wi = S.whatif !== 'none', pl = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`, soft = n('partial') + n('review');
   const head = CASE.stopAt >= 0
-    ? `<div class="verdict-row"><span class="stamp stop">${img('gate-closed', 22)}SEARCH STOPPED</span>${stars(3)}</div><p>${esc(st)} law stopped this search at step ${CASE.stopAt + 1}, ${esc(STEPS[CASE.stopAt].short.toLowerCase())}.</p>`
-    : `<div class="verdict-row"><span class="stamp go">${img('gate-open', 22)}SEARCH WENT THROUGH</span>${n('covered') ? stars(Math.min(3, n('covered'))) : ''}</div><p><b>Nothing in ${esc(st)} law stopped this search.</b> ${n('covered') ? `It had to pass ${n('covered')} checkpoint${n('covered') > 1 ? 's' : ''} on the way.` : 'Not a single state protection applied.'}</p>`;
+    ? `<div class="verdict-row"><span class="stamp stop">${img('gate-closed', 22)}SEARCH STOPPED</span>${stars(3)}</div><p>${wi ? 'With your what if, the search would stop' : `${esc(st)} law stopped this search`} at step ${CASE.stopAt + 1} (${esc(STEPS[CASE.stopAt].short)}).</p>`
+    : `<div class="verdict-row"><span class="stamp go">${img('gate-open', 22)}SEARCH WENT THROUGH</span>${n('covered') ? stars(Math.min(3, n('covered'))) : ''}</div><p><b>${wi ? 'Even with your what if, nothing blocks this search.' : `No ${esc(st)} rule blocked this search outright.`}</b> ${n('covered') + n('would') ? `It had to clear ${pl(n('covered') + n('would'), 'checkpoint')} on the way.` : soft ? `${pl(soft, 'rule')} applied only partly, or might apply.` : 'No state protection applied.'}</p>`;
   const models = D.states.filter(s => groupOf(s.name) === 'rules' && s.name !== st).map(s => s.name);
   if (!models.includes(S.model)) S.model = models[0];
   return `${head}
     <div class="tally">
-      <div><div class="n">${n('covered') + n('would')}</div><div class="l">${S.whatif === 'none' ? 'protections applied' : 'protections, with your what if'}</div></div>
+      <div><div class="n">${n('covered') + n('would')}</div><div class="l">${n('covered') + n('would') === 1 ? 'protection' : 'protections'}${S.whatif === 'none' ? ' applied' : ', with your what if'}</div></div>
       <div><div class="n">${n('partial') + n('review')}</div><div class="l">only partly, or unclear</div></div>
       <div><div class="n">${n('bypassed')}</div><div class="l">laws that exist but miss this case</div></div>
       <div><div class="n">${n('gap')}</div><div class="l">checks with no protection</div></div>
@@ -619,7 +642,7 @@ function verdictHTML() {
       </div>
       ${S.whatif === 'borrow' ? `<select class="select" id="model" aria-label="State to copy">${models.map(m => `<option${m === S.model ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>` : ''}
     </div>
-    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? `Lime gates show what would change if every ${esc(st)} bill on this topic, had passed.` : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
+    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? `Lime gates show what would change if every ${esc(st)} bill on this topic had passed.` : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
 }
 let walkTimer = null;
 function go(i, animate) {
@@ -640,7 +663,7 @@ function go(i, animate) {
   wk.classList.toggle('flip', Math.min(i, CASE.stopAt >= 0 ? CASE.stopAt : i) >= 4);
   document.querySelectorAll('.station').forEach((b, j) => {
     const sj = CASE.steps[j];
-    b.classList.toggle('cur', j === i);
+    b.classList.toggle('cur', j === i); if (j === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
     b.classList.toggle('seen', j <= i && SHOW[sj.agg] !== undefined);
     b.classList.toggle('skip', sj.agg === 'skip' && j <= i);
     b.querySelector('.gate').innerHTML = SHOW[sj.agg] ? img(SHOW[sj.agg].gate, 26) : '';
@@ -679,7 +702,8 @@ $('back').onclick = () => go(S.step - 1, true);
 $('restart').onclick = () => go(0, true);
 document.addEventListener('keydown', e => {
   if (S.tab !== 'case' || $('drawer').classList.contains('on')) return;
-  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (document.activeElement.closest('.dd-pop,.dd-btn,[role=tab],[role=tablist],.fbar,.stories,#drawer')) return;
   if (e.key === 'ArrowRight') nextStep();
   if (e.key === 'ArrowLeft') go(S.step - 1, true);
 });
@@ -711,7 +735,7 @@ function renderCompare() {
     const n = ks.filter(k => k === 'yes').length;
     return `<div class="cmpcol">
       <div class="cmpstate"><select class="select" id="cmp-${side}" aria-label="State ${side.toUpperCase()}">${stateOpts(st)}</select></div>
-      <div class="cmpsum"><div class="shields">${ks.map((k, i) => `<img class="px" src="${IC(k === 'yes' ? 'shield-yes' : k === 'part' ? 'shield-part' : k === 'skip' ? 'shield-empty' : 'shield-no')}" alt="" tabindex="0" data-tip="${esc(PROT[PORDER[i]].short)}: ${WORD[k]}">`).join('')}</div>
+      <div class="cmpsum"><ul class="sr-only">${ks.map((k, i) => `<li>${esc(PROT[PORDER[i]].short)}: ${WORD[k]}</li>`).join('')}</ul><div class="shields" aria-hidden="true">${ks.map((k, i) => `<img class="px" src="${IC(k === 'yes' ? 'shield-yes' : k === 'part' ? 'shield-part' : k === 'skip' ? 'shield-empty' : 'shield-no')}" alt="" data-tip="${esc(PROT[PORDER[i]].short)}: ${WORD[k]}">`).join('')}</div>
         <div class="cmpverdict"><b>${n}/7</b><span>${cs.stopAt >= 0 ? `Search stopped at step ${cs.stopAt + 1}` : 'Search goes through'}</span></div></div>
       <div class="cmpbadges">${hits.map(h => {
         const ref = h.x && h.x.r.top ? lawRef(h.x.r.top.law) : `data-cmpprot="${esc(st)}|${h.r}"`;
@@ -720,7 +744,7 @@ function renderCompare() {
   };
   const diffs = kA.filter((k, i) => k !== kB[i]).length;
   $('cmp-grid').innerHTML = `<div class="cmpcols">${col(A, ca, kA, kB, 'a')}<span class="vs" aria-hidden="true">VS</span>${col(B, cb, kB, kA, 'b')}</div>
-    <p class="cmpnote">${diffs ? `<span class="count sm">${diffs}</span> difference${diffs > 1 ? 's' : ''} between ${esc(A)} and ${esc(B)}, outlined in lime.` : `${esc(A)} and ${esc(B)} come out the same for this case.`} Tap any badge to read the law.</p>`;
+    <p class="cmpnote">${diffs ? `<span class="count sm">${diffs}</span> difference${diffs > 1 ? 's' : ''} between ${esc(A)} and ${esc(B)}, outlined in lime.` : `${esc(A)} and ${esc(B)} come out the same for this case.`} Select any badge to read the law.</p>`;
   $('cmp-a').onchange = e => setState(e.target.value);
   $('cmp-b').onchange = e => { S.cmpB = e.target.value; renderCompare(); };
 }
@@ -729,10 +753,11 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-cmpl
 
 /* Compare laws: every law and bill provision for one protection. Scenario limits show as exceptions. */
 let CLBILLS = true, CLF = 'all';
-const ADDS = /^adds? (an )?offenses?$/i;
+// How each limit changes the rule: narrow = covers fewer cases, weak = lower bar, loose = widens police use.
+const LTYPE = { 'adds offenses': 'loose', 'adds an offense': 'loose', 'probable cause, no court': 'weak', 'court order, lower standard': 'weak', 'fact of use': 'weak', 'via drone law': 'weak' };
 function limitsOf(x, r) {
   const raw = x.limits[r] || '', out = [];
-  if (raw) { const t = plainLimit(raw).replace(/^it /, '').replace(/^./, c => c.toUpperCase()); out.push({ adds: ADDS.test(raw), weak: !ADDS.test(raw) && !/^(would )?only /i.test(t), t }); }
+  if (raw) { const ty = LTYPE[raw.toLowerCase()] || 'narrow'; out.push({ ty, t: ty === 'loose' ? 'Would add more crimes police can use it for' : plainLimit(raw).replace(/^it /, '').replace(/^./, c => c.toUpperCase()) }); }
   if (x.source && !/drone|body/i.test(raw)) out.push({ t: `Only covers ${SRC_FOR[x.source]}` });
   if (x.db) out.push({ t: "Only covers searches of driver's license photos" });
   if (!broad(x)) out.push({ t: `Only binds ${x.whoFor.map(w => WHO_FOR[w]).join(' and ')}` });
@@ -741,7 +766,7 @@ function limitsOf(x, r) {
 function renderCompareLaws() {
   const r = S.prot;
   const all = [...D.laws.map(x => ({ ...x, kind: 'law' })), ...D.bills.map(x => ({ ...x, kind: 'bill' }))].filter(x => x.rules.includes(r))
-    .map(x => ({ ...x, lims: limitsOf(x, r) })).map(x => ({ ...x, exc: x.lims.some(l => !l.adds) }));
+    .map(x => ({ ...x, lims: limitsOf(x, r) })).map(x => ({ ...x, exc: x.lims.length > 0 }));
   const pool = all.filter(x => CLBILLS || x.kind === 'law');
   const nExc = pool.filter(x => x.exc).length, nFull = pool.length - nExc;
   const shown = pool.filter(x => CLF === 'all' || (CLF === 'exc' ? x.exc : !x.exc))
@@ -754,8 +779,8 @@ function renderCompareLaws() {
       <div class="seg2" role="group" aria-label="Laws or bills"><button data-clb="1" aria-pressed="${CLBILLS}">Laws + bills</button><button data-clb="0" aria-pressed="${!CLBILLS}">Laws only</button></div></div></div>`;
   const card = x => {
     const q = qFor(x);
-    const lims = x.lims.map(l => `<span class="cllim${l.adds ? ' adds' : ''}">${l.adds ? '<span class="xb xb-add">+ Adds</span>' : l.weak ? '<span class="xb xb-weak">Weaker</span>' : XN}${esc(l.t)}</span>`).join('');
-    const quotes = q.length ? q.slice(0, 2).map(qq => `<span class="clq">${qt(markup(clip(unq(qq.text), 240), r))}</span>`).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
+    const lims = x.lims.map(l => `<span class="cllim">${l.ty === 'loose' ? '<span class="xb xb-loose">Loosens</span>' : l.ty === 'weak' ? '<span class="xb xb-weak">Weaker</span>' : XN}${esc(l.t)}</span>`).join('');
+    const quotes = q.length ? q.slice(0, 2).map(qq => `<span class="clq">${qbody(qq.text, r, '', 240)}</span>`).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
       : `<span class="clq noq"><span class="pb pb-none">No quote recorded</span> ${esc(clip(x.does, 200))}</span>`;
     return `<button class="clitem ${x.kind}${x.exc ? ' isexc' : ''}" ${x.kind === 'law' ? lawRef(x) : billRef(x)}><span class="clst">${esc(ABBR[x.state] || x.state)}</span><span class="clbody"><span class="clname"><b>${esc(x.state)} · ${esc(x.name)}</b>${x.kind === 'bill' ? billStatus(x) : '<span class="tagline t-yes">Law</span>'}</span>${lims}${quotes}</span></button>`;
   };
@@ -771,26 +796,31 @@ $('cmp-grid').addEventListener('click', e => { const b = e.target.closest('[data
 let LT = 'laws', LS = { key: 'state', dir: 1 };
 const LDEF = {
   laws: { label: 'Laws in effect', rows: () => D.laws, cols: [['state', 'State'], ['name', 'Law'], ['does', 'What it does'], ['rules', 'Protections']],
-    status: [['', 'Any status'], ['clear', 'Settled'], ['check', 'Unclear']], ok: (r, s) => !s || (s === 'check' ? r.review : !r.review),
+    status: [['', 'Any'], ['clear', 'Settled'], ['check', 'Unclear']], ok: (r, s) => !s || (s === 'check' ? r.review : !r.review),
     open: (r, q) => lawDrawer(r, q), ref: r => lawRef(r) },
   bills: { label: 'Bills', rows: () => D.bills, cols: [['state', 'State'], ['name', 'Bill'], ['does', 'What it would do'], ['rules', 'Versus current law']],
-    status: [['', 'Any progress'], ...Object.entries(BILLSTEP).map(([k, v]) => [k, v])], ok: (r, s) => !s || r.step === s,
+    status: [['', 'Any'], ...Object.entries(BILLSTEP).map(([k, v]) => [k, v])], ok: (r, s) => !s || r.step === s,
     open: (r, q) => billDrawer(r, q), ref: r => billRef(r) },
   quotes: { label: 'Exact wording', rows: () => D.quotes, cols: [['state', 'State'], ['item', 'Law or bill'], ['text', 'Exact wording'], ['rule', 'Protection']],
-    status: [['', 'Laws and bills'], ['law', 'Laws only'], ['bill', 'Bills only']], ok: (r, s) => !s || (s === 'law' ? r.kind === 'Law' : r.kind !== 'Law'),
+    status: [['', 'All'], ['law', 'Laws only'], ['bill', 'Bills only']], ok: (r, s) => !s || (s === 'law' ? r.kind === 'Law' : r.kind !== 'Law'),
     open: (r, q) => r.kind === 'Law' ? lawDrawer(D.laws.find(l => l.state === r.state && l.name === r.item), q) : billDrawer(D.bills.find(b => b.state === r.state && b.name === r.item), q),
     ref: r => r.kind === 'Law' ? `data-law="${esc(r.state + '|' + r.item)}"` : `data-bill="${esc(r.state + '|' + r.item)}"` }
 };
 $('ltabs').innerHTML = Object.entries(LDEF).map(([k, d]) => `<button role="tab" data-lt="${k}" aria-selected="${k === LT}">${esc(d.label)}<span class="n">${d.rows().length}</span></button>`).join('');
+$('ltabs').addEventListener('keydown', e => {
+  const ks = Object.keys(LDEF); let i = ks.indexOf(LT);
+  if (e.key === 'ArrowRight') i = (i + 1) % ks.length; else if (e.key === 'ArrowLeft') i = (i + ks.length - 1) % ks.length; else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = ks.length - 1; else return;
+  e.preventDefault(); $('ltabs').querySelector(`[data-lt="${ks[i]}"]`).click(); $('ltabs').querySelector(`[data-lt="${ks[i]}"]`).focus();
+});
 $('ltabs').onclick = e => { const b = e.target.closest('[data-lt]'); if (b) { LT = b.dataset.lt; LS = { key: 'state', dir: 1 }; $('l-status').innerHTML = statusOpts(); renderLaws(); } };
-$('l-state').innerHTML = '<option value="">All states</option>' + D.states.map(s => `<option>${esc(s.name)}</option>`).join('');
-$('l-prot').innerHTML = '<option value="">Any protection</option>' + PORDER.map(k => `<option value="${k}">${esc(PROT[k].short)}</option>`).join('');
+$('l-state').innerHTML = '<option value="">All</option>' + D.states.map(s => `<option>${esc(s.name)}</option>`).join('');
+$('l-prot').innerHTML = '<option value="">Any</option>' + PORDER.map(k => `<option value="${k}">${esc(PROT[k].short)}</option>`).join('');
 const statusOpts = () => LDEF[LT].status.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
 $('l-status').innerHTML = statusOpts();
 ['l-q', 'l-state', 'l-prot', 'l-status'].forEach(id => $(id).addEventListener('input', renderLaws));
 $('l-clear').onclick = () => { $('l-q').value = ''; $('l-state').value = ''; $('l-prot').value = ''; $('l-status').value = ''; renderLaws(); };
 function renderLaws() {
-  document.querySelectorAll('#ltabs [data-lt]').forEach(b => b.setAttribute('aria-selected', b.dataset.lt === LT));
+  document.querySelectorAll('#ltabs [data-lt]').forEach(b => { b.setAttribute('aria-selected', b.dataset.lt === LT); b.tabIndex = b.dataset.lt === LT ? 0 : -1; });
   const def = LDEF[LT], q = $('l-q').value.trim().toLowerCase(), st = $('l-state').value, pr = $('l-prot').value, ss = $('l-status').value;
   let rows = def.rows().filter(r => (!st || r.state === st) && (!pr || (r.rules ? r.rules.includes(pr) : r.rule === pr)) && def.ok(r, ss) &&
     (!q || q.split(/\s+/).every(w => JSON.stringify(r).toLowerCase().includes(w))));
@@ -804,26 +834,32 @@ function renderLaws() {
     if (k === 'state') return `<span class="s">${esc(r.state)}</span>`;
     if (k === 'name') return `<span class="t">${hilite(r.name, qq)}${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.step ? billStatus(r) : ''}</span>`;
     if (k === 'item') return `<span class="t">${hilite(r.item, qq)}<span class="tagline t-no">${r.kind === 'Law' ? 'law' : 'bill'}</span></span>`;
-    if (k === 'does') return `<span class="d">${hilite(r.does.length > 170 ? r.does.slice(0, 170) + '…' : r.does, qq)}</span>`;
-    if (k === 'text') return `<span class="d q">${qt(markup(clip(unq(r.text), 200), r.rule, qq))}</span>`;
+    if (k === 'does') return `<span class="d">${hilite(clip(r.does, 170), qq)}</span>`;
+    if (k === 'text') return `<span class="d q">${qbody(r.text, r.rule, qq, 200)}</span>`;
     if (k === 'rules') return r.step ? billImpact(r) : protChips(r.rules, r.limits);
-    if (k === 'rule') return `<div class="pchips"><span class="pb pb-yes">${img(PICON[r.rule], 18)}${esc(PROT[r.rule].short)}</span></div>`;
+    if (k === 'rule') return `<span class="pchips"><span class="pb pb-yes">${img(PICON[r.rule], 18)}${esc(PROT[r.rule].short)}</span></span>`;
   };
-  const head = `<div class="lhead">${def.cols.map(([k, t]) => `<button data-sort="${k}" class="label">${esc(t)}${LS.key === k ? (LS.dir > 0 ? ' ▲' : ' ▼') : ''}</button>`).join('')}<span></span></div>`;
+  const head = `<div class="lhead">${def.cols.map(([k, t]) => `<button data-sort="${k}" class="label" aria-label="Sort by ${esc(t)}${LS.key === k ? (LS.dir > 0 ? ', sorted A to Z' : ', sorted Z to A') : ''}">${esc(t)}${LS.key === k ? (LS.dir > 0 ? ' ▲' : ' ▼') : ''}</button>`).join('')}<span></span></div>`;
   $('ltable').innerHTML = head + (rows.length ? rows.map(r => `<button class="lrow" ${def.ref(r)} data-hl="${esc(qq)}">${def.cols.map(([k]) => cell(r, k)).join('')}<span class="arrow go" aria-hidden="true">→</span></button>`).join('')
-    : `<div class="empty">${img('step-search', 64)}<b style="font:600 18px var(--head);color:var(--navy)">Nothing matches</b><span>Try fewer words or filters.</span><button class="copy" onclick="document.getElementById('l-clear').click()">Clear filters</button></div>`);
-  $('ltable').querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { LS = { key: b.dataset.sort, dir: LS.key === b.dataset.sort ? -LS.dir : 1 }; renderLaws(); });
+    : `<div class="empty">${img('step-search', 64)}<b style="font:600 18px var(--head);color:var(--navy)">Nothing matches</b><span>Try fewer words or filters.</span><button class="copy" onclick="document.getElementById('l-clear').click();document.getElementById('l-q').focus()">Clear filters</button></div>`);
+  $('ltable').querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { const k = b.dataset.sort; LS = { key: k, dir: LS.key === k ? -LS.dir : 1 }; renderLaws(); $('ltable').querySelector(`[data-sort="${k}"]`).focus(); });
 }
 
 /* ================= home ================= */
 $('w-sub').textContent = 'It depends on where you live. Pick a state, follow a police search step by step, or read the laws themselves.';
-$('hstats').innerHTML = [[counts.rules, 'states have at least one of 7 common protections', 'shield-yes'], [counts.zero, 'have a face recognition law with none of them', 'shield-part'], [counts.none, 'have no face recognition law at all', 'shield-no']]
+$('hstats').innerHTML = [[counts.rules, 'states have at least one of 7 common protections, in full or in part', 'shield-yes'], [counts.zero, 'have a face recognition law with none of them', 'shield-part'], [counts.none, `have no face recognition law at all (${counts.none - 1} states and DC)`, 'shield-no']]
   .map(([n, t, ic]) => `<div class="hstat">${img(ic, 36)}<b>${n}</b><span>${esc(t)}</span></div>`).join('');
 $('home').onclick = () => setTab('home');
 
+/* back and forward buttons */
+addEventListener('popstate', () => {
+  try { const h = new URLSearchParams(location.hash.slice(1)); KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); }); } catch (e) {}
+  lastTab = S.tab; syncFilters(); setState(S.state); setTab(S.tab);
+});
 /* ================= start ================= */
 syncFilters();
 setState(S.state, false);
 restartCase(false);
 setTab(S.tab);
+READY = true;
 })();

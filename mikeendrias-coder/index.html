@@ -27,7 +27,7 @@
     <button class="tab" role="tab" id="tab-laws" aria-controls="v-laws" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Read the laws</button>
   </nav>
   <div class="right">
-    <button class="pill motion" id="motion" aria-pressed="false" data-tip="Pause or play all animation"><img class="px" src="icons/who-local.svg" alt=""><span class="lt" id="motion-t">Pause motion</span><span class="sr-only" id="motion-sr">Pause all animation</span></button>
+    <button class="pill motion" id="motion" data-tip="Pause or play all animation"><img class="px" src="icons/who-local.svg" alt=""><span class="lt" id="motion-t">Pause motion</span></button>
     <button class="pill" id="open-about" aria-label="About this page" data-tip="About this page, sources and terms"><span class="i-wrap"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></span><span class="lt">About this page</span></button>
   </div>
 </header>
@@ -45,7 +45,7 @@
     </div>
     <button class="card storybox" id="open-stories">
       <img class="px" src="icons/step-photo.svg" alt="">
-      <span><b style="font:600 16px var(--head)">Start with a story</b><br><span class="small muted">Six real situations that show how the laws work</span></span>
+      <span><b style="font:600 16px var(--head)">Start with a story</b><br><span class="small muted">Six made-up cases built on real state laws</span></span>
       <span class="arrow" aria-hidden="true">→</span>
     </button>
     <div class="card legendcard" aria-label="How to read the symbols">
@@ -98,7 +98,7 @@
       <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
         <h2 class="sechead" id="s-sechead">What stands between people here and a face scan</h2>
         <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
-        <span class="small muted tapnote" style="margin-left:auto">Tap one to read the law</span>
+        <span class="small muted tapnote" style="margin-left:auto">Select one to read the law</span>
       </div>
       <div class="prots" id="s-prots"></div>
       <div class="sfoot" id="s-foot"></div>
@@ -107,6 +107,7 @@
 
   <!-- FOLLOW A CASE -->
   <section class="view" id="v-case" role="tabpanel" aria-labelledby="tab-case" tabindex="-1" style="gap:12px">
+    <h1 class="sr-only">Follow a case</h1>
     <div class="fbar" id="fbar">
       <label class="seg seg-state"><span class="label">State</span><select id="f-state" data-statepick></select></label>
       <label class="seg"><span class="label">Who is searching</span><select id="f-who"></select></label>
@@ -141,6 +142,7 @@
 
   <!-- COMPARE -->
   <section class="view card" id="v-compare" role="tabpanel" aria-labelledby="tab-compare" tabindex="-1">
+    <h1 class="sr-only">Compare</h1>
     <div class="cmpwrap scroll">
       <div class="seg2 cmpmode" id="cmp-mode" role="group" aria-label="What to compare"><button data-m="states"><img class="px" src="icons/step-lineup.svg" alt="" width="22" height="22">States</button><button data-m="laws"><img class="px" src="icons/law.svg" alt="" width="22" height="22">Laws &amp; bills</button></div>
       <div class="ctxchip" id="cmp-ctx"></div>
@@ -150,6 +152,7 @@
 
   <!-- READ THE LAWS -->
   <section class="view card" id="v-laws" role="tabpanel" aria-labelledby="tab-laws" tabindex="-1">
+    <h1 class="sr-only">Read the laws</h1>
     <div class="lawswrap">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div class="ltabs" role="tablist" id="ltabs"></div>
@@ -161,8 +164,8 @@
         <label><span class="label">Protection</span><select class="select" id="l-prot"></select></label>
         <label><span class="label">Status</span><select class="select" id="l-status"></select></label>
       </div>
-      <div class="lcount"><span class="label" id="l-count"></span><button class="copy" id="l-clear">Clear filters</button></div>
-      <div class="ltable scroll" id="ltable"></div>
+      <div class="lcount"><span class="label" id="l-count" role="status"></span><button class="copy" id="l-clear">Clear filters</button></div>
+      <div class="ltable scroll" id="ltable" role="tabpanel" aria-label="Results"></div>
     </div>
   </section>
 </main>
@@ -183,5 +186,6 @@
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script src="dropdown.js"></script>
+<div class="sr-only" role="status" id="sr-live"></div>
 </body>
 </html>

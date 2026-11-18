@@ -120,7 +120,7 @@
     else if (e.key === 'PageUp') { e.preventDefault(); setActive(open.active - 8); }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(open.active); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
-    else if (e.key === 'Tab') { close(false); }
+    else if (e.key === 'Tab') { close(true); }
     else if (e.key.length === 1 && /\S/.test(e.key)) {
       const now = Date.now(); open.typed = (now - open.t < 700 ? open.typed : '') + e.key.toLowerCase(); open.t = now;
       const opts = [...open.sel.options]; const start = open.typed.length === 1 ? open.active + 1 : open.active;
