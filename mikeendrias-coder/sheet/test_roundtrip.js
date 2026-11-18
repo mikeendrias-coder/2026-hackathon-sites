@@ -1,7 +1,7 @@
 // Checks that site data -> sheet tabs -> site data gives back the same thing.
 // Run: node sheet/test_roundtrip.js
 const fs = require('fs'), path = require('path');
-const FV = require(path.join(__dirname, 'Code.gs.js'));
+const vm = require('vm'); const box = { module: { exports: {} } }; vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'Code.gs'), 'utf8'), box); const FV = box.module.exports;
 const live = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/live.json'), 'utf8'));
 const rows = FV.toRows(live, []);
 // Simulate the sheet: everything is stored as text, except checkboxes.
