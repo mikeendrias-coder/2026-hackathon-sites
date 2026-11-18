@@ -64,15 +64,16 @@ const STEPS = [
 
 // Display status: 3 gates plus a lime "would be" gate for what-ifs.
 const SHOW = {
-  covered:  { gate: 'gate-closed',  tag: 't-yes',   word: 'Protected' },
-  stop:     { gate: 'gate-closed',  tag: 't-stop',  word: 'Search stopped' },
-  partial:  { gate: 'gate-partial', tag: 't-part',  word: 'Partly protected' },
-  review:   { gate: 'gate-partial', tag: 't-part',  word: 'Unclear' },
-  would:    { gate: 'gate-would',   tag: 't-would', word: 'Would be protected' },
-  bypassed: { gate: 'gate-open',    tag: 't-no',    word: "Law doesn't reach this" },
-  gap:      { gate: 'gate-open',    tag: 't-no',    word: 'Not protected' },
-  info:     { gate: 'gate-open',    tag: 't-no',    word: 'No special rule' }
+  covered:  { gate: 'gate-closed',  sh: 'shield-yes',  tag: 't-yes',   word: 'Protected' },
+  stop:     { gate: 'gate-closed',  sh: 'shield-yes',  tag: 't-stop',  word: 'Search stopped' },
+  partial:  { gate: 'gate-partial', sh: 'shield-part', tag: 't-part',  word: 'Partly protected' },
+  review:   { gate: 'gate-partial', sh: 'shield-part', tag: 't-part',  word: 'Unclear' },
+  would:    { gate: 'gate-would',   sh: 'shield-yes',  tag: 't-would', word: 'Would be protected' },
+  bypassed: { gate: 'gate-open',    sh: 'shield-no',   tag: 't-no',    word: "Law doesn't reach this" },
+  gap:      { gate: 'gate-open',    sh: 'shield-no',   tag: 't-no',    word: 'Not protected' },
+  info:     { gate: 'gate-open',    sh: 'shield-no',   tag: 't-no',    word: 'No special rule' }
 };
+const LV = { yes: ['shield-yes', 'Yes', 't-yes'], part: ['shield-part', 'Partly', 't-part'], no: ['shield-no', 'No', 't-no'] };
 
 const PRESETS = [
   { t: 'The lineup loophole', s: { state: 'Indiana', who: 'local', src: 'photo', db: 'dmv', crime: 'serious' },
@@ -101,7 +102,7 @@ const GLOSS = {
   'bill': ['Bill', 'A proposed law. "Still alive" means lawmakers can still pass it. Otherwise it died without becoming law.'],
   'unclear': ['Unclear', 'Our research flagged an open question about how this law should be counted, or who it covers. Most often: whether a state law also binds federal agents.']
 };
-const term = (key, text) => `<button class="term" data-term="${esc(key)}">${esc(text || GLOSS[key][0])}</button>`;
+const term = (key, text) => `<span class="term" role="button" tabindex="0" data-term="${esc(key)}" data-tip="${esc(GLOSS[key][1])}">${esc(text || GLOSS[key][0])}</span>`;
 
 /* ================= map ================= */
 const ABBR = {Alabama:'AL',Alaska:'AK',Arizona:'AZ',Arkansas:'AR',California:'CA',Colorado:'CO',Connecticut:'CT',Delaware:'DE','District of Columbia':'DC',Florida:'FL',Georgia:'GA',Hawaii:'HI',Idaho:'ID',Illinois:'IL',Indiana:'IN',Iowa:'IA',Kansas:'KS',Kentucky:'KY',Louisiana:'LA',Maine:'ME',Maryland:'MD',Massachusetts:'MA',Michigan:'MI',Minnesota:'MN',Mississippi:'MS',Missouri:'MO',Montana:'MT',Nebraska:'NE',Nevada:'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',Ohio:'OH',Oklahoma:'OK',Oregon:'OR',Pennsylvania:'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD',Tennessee:'TN',Texas:'TX',Utah:'UT',Vermont:'VT',Virginia:'VA',Washington:'WA','West Virginia':'WV',Wisconsin:'WI',Wyoming:'WY'};
@@ -229,7 +230,7 @@ const hilite = (text, q) => {
 const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}">Copy</button></div>“${hilite(unq(q.text), hl)}”</blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
-const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pchip${limits[r] ? ' lim' : ''}" title="${esc(PROT[r].long)}">${esc(PROT[r].short)}${limits[r] ? ' (limited)' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pchip none">None of the 7</span></div>';
+const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pchip${limits[r] ? ' lim' : ''}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${esc(PROT[r].short)}${limits[r] ? ' (limited)' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pchip none">None of the 7</span></div>';
 const billStatus = b => b.pending ? '<span class="tagline t-would">Still alive</span>' : `<span class="tagline t-no">${esc(BILLSTEP[b.step] || b.step)}</span>`;
 const lawRef = l => `data-law="${esc(l.state + '|' + l.name)}"`;
 const billRef = b => `data-bill="${esc(b.state + '|' + b.name)}"`;
@@ -270,7 +271,7 @@ function protDrawer(state, rule) {
       ${qs.map(q => quoteHTML(q)).join('')}
       <div class="linkrow"><button class="copy" ${lawRef(l)}>Full law details</button>${l.link ? `<a class="copy" href="${esc(l.link)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Official text ↗</a>` : ''}</div></div>`;
   }).join('<hr style="border:0;border-top:1px solid var(--rule);margin:0">');
-  openDrawer(`${state} · Protection`, `<span>${esc(PROT[rule].short)}: ${word}</span>${img(sp.level === 'yes' ? 'gate-closed' : sp.level === 'part' ? 'gate-partial' : 'gate-open', 30)}`, `
+  openDrawer(`${state} · Protection`, `<span>${esc(PROT[rule].short)}: ${word}</span>${img(LV[sp.level][0], 32)}`, `
     <p>${esc(PROT[rule].long)}</p>
     ${sp.laws.length ? lawBlocks : `<p>Nothing in ${esc(state)} law adds this protection. Only the U.S. Constitution's basic limits on searches and arrests apply.</p>`}
     <div class="sec"><h3>${esc(state)} bills that would add it</h3>${here.length ? `<div class="mini">${here.map(b => `<button ${billRef(b)}><span><b>${esc(b.name)}</b> ${billStatus(b)}<br><span class="small muted">${esc(b.does.slice(0, 140))}${b.does.length > 140 ? '…' : ''}</span></span><span class="arrow">→</span></button>`).join('')}</div>` : '<p class="small muted">None so far.</p>'}</div>
@@ -279,12 +280,12 @@ function protDrawer(state, rule) {
 const INFO = {
   map: ['The map', 'What the colors mean', () => `<p>Each square is a state. The darker the square, the more of the 7 protections that state's laws include, in full or in part.</p>${legendHTML(true)}<p class="small muted">Click a state to see its scorecard, or to follow a case there.</p>`, 'pin'],
   protections: ['The basics', 'The 7 protections we check', () => `<p>Police can run a photo of an unknown person through software that compares it to millions of faces. Some states put limits on that. We check every state for these seven common ones:</p><div class="glist">${PORDER.map((r, i) => `<div style="display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:center">${img(PICON[r], 36)}<span><dt>${i + 1}. ${esc(PROT[r].short)}</dt><dd>${esc(PROT[r].long)}</dd></span></div>`).join('')}</div>`, 'shield-full'],
-  gates: ['How to read it', 'Gates on the road', () => `<p>Your search walks down a road. At each step, a gate shows whether state law gets in the way.</p><div class="howto">
-    <div>${img('gate-closed', 36)}<span><b>Protected.</b> A state law protects people at this step.</span></div>
-    <div>${img('gate-partial', 36)}<span><b>Partly protected, or unclear.</b> There is a protection, but only in some situations, or it isn't settled who it covers.</span></div>
-    <div>${img('gate-open', 36)}<span><b>Not protected.</b> No state law steps in here, or the law that exists doesn't reach this situation.</span></div>
-    <div>${img('gate-would', 36)}<span><b>Would be protected.</b> Shown only when you try a "what if" on the Result step.</span></div></div>
-    <p class="small muted">Where a state has no rule, the U.S. Constitution's basic limits on searches and arrests still apply. "Not protected" means no extra protection from state law.</p>`, 'gate-closed'],
+  gates: ['How to read it', 'Gates on the road', () => `<p>Shields show whether state law protects people. On the case road, the same colors appear as gates the search has to get past.</p><div class="howto">
+    <div>${img('shield-yes', 36)}<span><b>Protected</b> <span class="tagline t-yes">Yes</span><br>A state law protects people here. On the road: a closed gate.</span></div>
+    <div>${img('shield-part', 36)}<span><b>Partly protected, or unclear</b> <span class="tagline t-part">Partly</span><br>A protection exists, but only in some situations, or it isn't settled who it covers. On the road: a half gate.</span></div>
+    <div>${img('shield-no', 36)}<span><b>Not protected</b> <span class="tagline t-no">No</span><br>No state law steps in, or the law that exists doesn't reach this situation. On the road: two red posts, nothing in between.</span></div>
+    <div>${img('gate-would', 36)}<span><b>Would be protected</b> <span class="tagline t-would">What if</span><br>Shown only when you try a "what if" on the Result step.</span></div></div>
+    <p class="small muted">Where a state has no rule, the U.S. Constitution's basic limits on searches and arrests still apply. "Not protected" means no extra protection from state law.</p>`, 'shield-yes'],
   laws: ['The data', 'Where this comes from', () => `<p>Every law, bill and quote here comes from CDT's research memo on state facial recognition laws. ${esc(D.source)}</p><p>Laws marked ${term('unclear')} have open questions about how they should be counted.</p><p class="small muted">Tap any row to read the exact wording and open the official text.</p>`, 'law'],
 };
 const legendHTML = big => `<div class="mlegend"${big ? ' style="font-size:14px"' : ''}>
@@ -325,6 +326,28 @@ document.addEventListener('click', e => {
   else if (t.dataset.goto) { closeDrawer(); if (t.dataset.st) setState(t.dataset.st, false); setTab(t.dataset.goto); }
 });
 $('open-about').onclick = aboutDrawer;
+document.addEventListener('keydown', e => { const t = e.target.closest && e.target.closest('span[role=button]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); } });
+
+/* ================= hover pop-outs (in-page, not browser tooltips) ================= */
+const tip = document.createElement('div'); tip.className = 'tip'; tip.setAttribute('role', 'tooltip'); tip.id = 'tip'; document.body.appendChild(tip);
+let tipFor = null;
+function showTip(el) {
+  const text = el.dataset.tip; if (!text) return;
+  tipFor = el; tip.textContent = text; tip.classList.add('on'); el.setAttribute('aria-describedby', 'tip');
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.left + r.width / 2 - tw / 2, y = r.top - th - 10, below = false;
+  if (y < 8) { y = r.bottom + 10; below = true; }
+  x = Math.max(8, Math.min(innerWidth - tw - 8, x));
+  tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.classList.toggle('below', below);
+  tip.style.setProperty('--ax', (r.left + r.width / 2 - x) + 'px');
+}
+function hideTip() { if (tipFor) tipFor.removeAttribute('aria-describedby'); tipFor = null; tip.classList.remove('on'); }
+const canHover = matchMedia('(hover: hover)').matches;
+document.addEventListener('mouseover', e => { if (!canHover) return; const el = e.target.closest('[data-tip]'); if (el && el !== tipFor) showTip(el); else if (!el && tipFor) hideTip(); });
+document.addEventListener('focusin', e => { const el = e.target.closest('[data-tip]'); if (el && e.target.matches(':focus-visible')) showTip(el); });
+document.addEventListener('focusout', hideTip);
+document.addEventListener('scroll', hideTip, true);
+document.addEventListener('click', hideTip);
 $('open-stories').onclick = storiesDrawer;
 
 /* ================= tabs ================= */
@@ -346,7 +369,7 @@ const tiles = $('tiles');
 D.states.forEach(s => {
   const ab = ABBR[s.name], p = POS[ab];
   const b = document.createElement('button');
-  b.className = 'tile ' + mapLevel(s.name); b.textContent = ab; b.title = s.name; b.dataset.state = s.name;
+  b.className = 'tile ' + mapLevel(s.name); b.textContent = ab; b.dataset.state = s.name; b.dataset.tip = groupOf(s.name) === 'none' ? `${s.name}: no face recognition law` : groupOf(s.name) === 'zero' ? `${s.name}: a law, but none of the 7 protections` : `${s.name}: ${protCount(s.name)} of 7 protections`;
   b.setAttribute('aria-label', s.name); b.style.gridColumn = p[0] + 1; b.style.gridRow = p[1] + 1;
   tiles.appendChild(b);
 });
@@ -376,7 +399,7 @@ function renderState() {
   $('s-name').textContent = st;
   const levels = PORDER.map(r => stateProt(st, r).level);
   $('s-hud').innerHTML = `<div class="top"><span class="pxf">PROTECTION METER</span>${img('capitol', 34)}</div>
-    <div class="shields" role="img" aria-label="${n} of 7 protections">${levels.map((l, i) => `<img class="px" src="${IC(l === 'yes' ? 'shield-full' : l === 'part' ? 'shield-half' : 'shield-empty')}" alt="" style="animation-delay:${i * 70}ms">`).join('')}</div>
+    <div class="shields" role="img" aria-label="${n} of 7 protections">${levels.map((l, i) => `<img class="px" src="${IC(LV[l][0])}" alt="" tabindex="0" data-tip="${esc(PROT[PORDER[i]].short)}: ${LV[l][1]}" style="animation-delay:${i * 70}ms">`).join('')}</div>
     <div class="score"><b>${n}/7</b><span>${g === 'none' ? 'No face recognition law' : g === 'zero' ? 'Has a law, but none of the 7' : n > nFull ? `${nFull} full, ${n - nFull} partial` : 'All in full'}</span></div>`;
   $('s-sum').innerHTML = g === 'none'
     ? `${esc(st)} has no law about police ${term('face recognition')}. ${alive.length ? `${alive.length} ${term('bill', alive.length > 1 ? 'bills are' : 'bill is')} still alive.` : ''} It's one of ${counts.none} states with no law.`
@@ -385,11 +408,11 @@ function renderState() {
     : `${esc(st)} has ${lawsHere.length === 1 ? 'one law' : lawsHere.length + ' laws'} on police face recognition. ${nFull ? `${nFull} protection${nFull > 1 ? 's apply' : ' applies'} in full` : 'None apply in full'}${n > nFull ? `, and ${n - nFull} only in some situations` : ''}.`;
   $('s-prots').innerHTML = PORDER.map(r => {
     const sp = stateProt(st, r);
-    const w = { yes: ['gate-closed', 'Yes', 'yes'], part: ['gate-partial', 'Partly', 'part'], no: ['gate-open', 'No', 'no'] }[sp.level];
+    const w = LV[sp.level];
     const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : ''; })() : '';
     const nb = billsFor(st, r).filter(b => b.pending).length;
-    return `<button class="prot" data-prot="${r}">${img(PICON[r], 38)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" title="Unclear">?</span>' : ''}</b>
-      <span class="st ${w[2]}">${w[1]}${lim ? `: ${esc(lim.replace(/^it /, ''))}` : sp.level === 'yes' ? `: ${esc(sp.laws[0].name)}` : ''}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} alive` : ''}</span></span><span class="end">${img(w[0], 30)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
+    return `<button class="prot" data-prot="${r}">${img(PICON[r], 38)}<span><b>${esc(PROT[r].short)}${sp.review ? '<span class="flag" data-tip="Unclear: our research flagged an open question about who this law covers.">?</span>' : ''}</b>
+      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : 'No state law adds this'}${nb ? ` · ${nb} bill${nb > 1 ? 's' : ''} alive` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 32)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 38)}<span><b>Bills in ${esc(st)}</b>
       <span class="st">${billsHere.length ? `${billsHere.length} recorded${alive.length ? `, ${alive.length} still alive` : ', none still alive'}` : 'None recorded'}</span></span><span class="end">${alive.length ? img('gate-would', 30) : ''}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   const other = lawsHere.filter(l => !l.rules.length);
@@ -418,7 +441,7 @@ function restartCase(animate) {
 }
 function buildTrack() {
   $('track').innerHTML = `<div class="road"></div><div class="done" id="done"></div>` +
-    STEPS.map((s, i) => `<button class="station" data-i="${i}" style="left:${stepX(i)}%" aria-label="Step ${i + 1}: ${esc(s.short)}">${img(s.icon, 30)}<span class="gate"></span><span class="lbl">${esc(s.short)}</span></button>`).join('') +
+    STEPS.map((s, i) => `<button class="station" data-i="${i}" style="left:${stepX(i)}%" aria-label="Step ${i + 1}: ${esc(s.short)}" data-tip="Step ${i + 1}: ${esc(s.title)}">${img(s.icon, 30)}<span class="gate"></span><span class="lbl">${esc(s.short)}</span></button>`).join('') +
     `<div class="walker" id="walker" style="left:${stepX(0)}%">${img('who-' + S.who, 44)}${img('src-' + S.src, 24, 'small')}<span class="bubble" id="bubble"></span></div>`;
   $('track').onclick = e => { const b = e.target.closest('.station'); if (b) go(+b.dataset.i, true); };
 }
@@ -456,11 +479,11 @@ function resultRow(r, step) {
   const sh = SHOW[kind];
   const name = r.rule === '4' ? (r.at === 'lineup' ? 'Lineups' : "A match isn't enough") : PROT[r.rule].short;
   const src = r.bill ? `${billRef(r.bill)}` : r.top ? lawRef(r.top.law) : r.mhits ? lawRef(r.mhits[0].law) : `data-prot="${r.rule}"`;
-  return `<div class="res">${img(sh.gate, 34)}<div><div class="rt">${esc(name)}<span class="tagline ${sh.tag}">${esc(sh.word)}</span></div><div class="rs">${esc(sentence(r, step))}</div></div>
+  return `<div class="res">${img(sh.sh, 34)}<div><div class="rt">${esc(name)}<span class="tagline ${sh.tag}">${esc(sh.word)}</span></div><div class="rs">${esc(sentence(r, step))}</div></div>
     <button class="copy" ${src}>${r.status === 'gap' ? 'Fixes' : r.bill ? 'Read bill' : 'Read law'}</button></div>`;
 }
 function otherRow(l) {
-  return `<div class="res">${img('gate-partial', 34)}<div><div class="rt">${esc(l.name)}<span class="tagline t-part">Other ${esc(l.state)} law</span></div><div class="rs">${esc(l.does)}</div></div><button class="copy" ${lawRef(l)}>Read law</button></div>`;
+  return `<div class="res">${img('law', 34)}<div><div class="rt">${esc(l.name)}<span class="tagline t-part">Other ${esc(l.state)} law</span></div><div class="rs">${esc(l.does)}</div></div><button class="copy" ${lawRef(l)}>Read law</button></div>`;
 }
 function verdictHTML() {
   const st = S.state, all = CASE.steps.flatMap(s => s.agg === 'skip' ? [] : s.results);
@@ -517,7 +540,7 @@ function go(i, animate) {
   });
   $('stephead').innerHTML = `${img(s.icon, 48)}<div><div class="stepno">STEP ${i + 1} OF ${STEPS.length}</div><div class="stitle">${esc(s.title)}</div></div>`;
   let html = `<p class="narr">${narration(s)}</p>`;
-  if (s.agg === 'skip') html += `<div class="res">${img('gate-closed', 34)}<div><div class="rs">This step never happens. The search was stopped at step ${CASE.stopAt + 1}.</div></div><span></span></div>`;
+  if (s.agg === 'skip') html += `<div class="res">${img('shield-yes', 34)}<div><div class="rs">This step never happens. The search was stopped at step ${CASE.stopAt + 1}.</div></div><span></span></div>`;
   else {
     if (s.key === 'search') html += otherLaws(S.state, S).map(otherRow).join('');
     html += s.results.map(r => resultRow(r, s)).join('');
@@ -572,7 +595,7 @@ function renderCompare() {
     const r = s.results[k]; if (!r) return `<div class="muted small">No special rule</div>`;
     const kind = s.agg === 'stop' && r.rule === '3' ? 'stop' : r.status;
     const ref = r.top ? lawRef(r.top.law) : `data-cmpprot="${st}|${r.rule}"`;
-    return `<div><button class="cell" ${ref}>${img(SHOW[kind].gate, 28)}<span>${esc(SHOW[kind].word)}</span></button></div>`;
+    return `<div><button class="cell" ${ref}>${img(SHOW[kind].sh, 28)}<span class="tagline ${SHOW[kind].tag}">${esc(SHOW[kind].word)}</span></button></div>`;
   };
   STEPS.forEach((s, i) => {
     if (s.key === 'trial') return;

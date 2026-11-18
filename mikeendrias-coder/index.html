@@ -19,7 +19,7 @@
     <span><b>FACE VALUE<span class="cur" aria-hidden="true">_</span></b><small>State face recognition laws</small></span>
   </button>
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/gate-closed.svg" alt="">Your state</button>
+    <button class="tab" role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">Your state</button>
     <button class="tab" role="tab" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Follow a case</button>
     <button class="tab" role="tab" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
     <button class="tab" role="tab" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Read the laws</button>
@@ -33,7 +33,7 @@
   <!-- map column (desktop) -->
   <aside class="mapcol" aria-label="Pick a state">
     <div class="card mapcard">
-      <div class="hd"><span class="label dot">Pick a state</span><button class="info" data-info="map" aria-label="What the map colors mean">i</button></div>
+      <div class="hd"><span class="label dot">Pick a state</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean">i</button></div>
       <div class="tiles" id="tiles" role="group" aria-label="States"></div>
       <div class="mlegend" id="mlegend"></div>
       <label class="sr-only" for="state-pick">State</label>
@@ -44,12 +44,12 @@
       <span><b style="font:600 16px var(--head)">Start with a story</b><br><span class="small muted">Six real situations that show how the laws work</span></span>
       <span class="arrow" aria-hidden="true">→</span>
     </button>
-    <div class="card legendcard" aria-label="How to read the gates">
-      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read the gates</span><button class="info" data-info="gates" aria-label="More about the gates">i</button></div>
-      <div><img class="px" src="icons/gate-closed.svg" alt="">Protected by state law</div>
-      <div><img class="px" src="icons/gate-partial.svg" alt="">Partly protected, or unclear</div>
-      <div><img class="px" src="icons/gate-open.svg" alt="">Not protected</div>
-      <div><img class="px" src="icons/gate-would.svg" alt="">Would be, if a bill passed</div>
+    <div class="card legendcard" aria-label="How to read the symbols">
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">How to read it</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols">i</button></div>
+      <div><img class="px" src="icons/shield-yes.svg" alt=""><span class="tagline t-yes">Yes</span>Protected by state law</div>
+      <div><img class="px" src="icons/shield-part.svg" alt=""><span class="tagline t-part">Partly</span>Only sometimes, or unclear</div>
+      <div><img class="px" src="icons/shield-no.svg" alt=""><span class="tagline t-no">No</span>Not protected</div>
+      <div class="gates"><img class="px" src="icons/gate-closed.svg" alt=""><img class="px" src="icons/gate-partial.svg" alt=""><img class="px" src="icons/gate-open.svg" alt=""><span>Same colors as gates on the case road</span></div>
     </div>
   </aside>
 
@@ -67,8 +67,8 @@
     <div class="scroll" style="flex:1;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
         <span class="label">The 7 protections we check</span>
-        <button class="info" data-info="protections" aria-label="About the seven protections">i</button>
-        <span class="small muted" style="margin-left:auto">Tap one to read the law</span>
+        <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are">i</button>
+        <span class="small muted tapnote" style="margin-left:auto">Tap one to read the law</span>
       </div>
       <div class="prots" id="s-prots"></div>
       <div class="sfoot" id="s-foot"></div>
@@ -86,7 +86,7 @@
     </div>
     <div class="card trackcard">
       <div class="sky" aria-hidden="true"><img class="px" src="icons/cloud.svg" alt="" style="top:96px;animation-duration:38s;animation-delay:-6s"><img class="px" src="icons/cloud.svg" alt="" style="top:118px;width:44px;height:44px;opacity:.7;animation-duration:55s;animation-delay:-30s"><img class="px" src="icons/cloud.svg" alt="" style="top:84px;width:52px;height:52px;animation-duration:46s;animation-delay:-20s"></div>
-      <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates">i</button></div>
+      <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates" data-tip="How to read the gates and colors">i</button></div>
       <div class="track" id="track"></div>
     </div>
     <div class="card stepcard">
@@ -95,7 +95,7 @@
       <div class="stepnav">
         <button class="btn ghost" id="back">← Back</button>
         <button class="btn lime" id="next">Next step →</button>
-        <button class="btn ghost" id="restart" aria-label="Start over">↻</button>
+        <button class="btn ghost" id="restart" aria-label="Start over" data-tip="Start the case over">↻</button>
         <span class="hint">← → keys work too</span>
       </div>
     </div>
@@ -119,7 +119,7 @@
     <div class="lawswrap">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div class="ltabs" role="tablist" id="ltabs"></div>
-        <button class="info" data-info="laws" aria-label="About this data">i</button>
+        <button class="info" data-info="laws" aria-label="About this data" data-tip="Where this data comes from">i</button>
       </div>
       <div class="lfilters">
         <input class="search" id="l-q" type="search" placeholder="Search the text, like warrant, drone or lineup" aria-label="Search">
@@ -134,7 +134,7 @@
 </main>
 
 <nav class="bnav" role="tablist" aria-label="Sections">
-  <button role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/gate-closed.svg" alt="">State</button>
+  <button role="tab" data-tab="state" aria-selected="true"><img class="px" src="icons/shield-yes.svg" alt="">State</button>
   <button role="tab" data-tab="case" aria-selected="false"><img class="px" src="icons/step-search.svg" alt="">Case</button>
   <button role="tab" data-tab="compare" aria-selected="false"><img class="px" src="icons/step-lineup.svg" alt="">Compare</button>
   <button role="tab" data-tab="laws" aria-selected="false"><img class="px" src="icons/step-disclose.svg" alt="">Laws</button>
@@ -162,7 +162,7 @@
     </div>
     <div class="wbody">
       <div class="wchoices">
-        <button data-go="state"><img class="px" src="icons/gate-closed.svg" alt=""><b>See your state</b><span>Which of 7 common protections it has</span></button>
+        <button data-go="state"><img class="px" src="icons/shield-yes.svg" alt=""><b>See your state</b><span>Which of 7 common protections it has</span></button>
         <button data-go="case"><img class="px" src="icons/step-search.svg" alt=""><b>Follow a case</b><span>Walk one police search step by step</span></button>
         <button data-go="laws"><img class="px" src="icons/step-disclose.svg" alt=""><b>Read the laws</b><span>Search every law, bill and exact quote</span></button>
       </div>
