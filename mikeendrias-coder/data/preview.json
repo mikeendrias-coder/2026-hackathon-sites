@@ -1,6 +1,6 @@
 {
  "source": "State Facial Recognition Laws and Bills memo, research current through Oct. 26, 2026.",
- "updated": "2026-11-18T22:14:41.111Z",
+ "updated": "2026-11-18T22:56:00.635Z",
  "config": {
   "prot": {
    "1": {
@@ -933,8 +933,8 @@
    "review": false,
    "cite": "2021 Vt. Acts & Resolves No. 17, § 1 (H.195, eff. May 4, 2021) (uncodified session law).",
    "link": "https://legislature.vermont.gov/Documents/2022/Docs/ACTS/ACT017/ACT017%20As%20Enacted.pdf",
-   "banException": true,
-   "note": "This is an exception to Vermont's pause, not a protection."
+   "note": "This is an exception to Vermont's pause, not a protection.",
+   "banException": true
   },
   {
    "whoFor": [
@@ -953,6 +953,8 @@
    "review": true,
    "cite": "Va. Code §§ 15.2-1723.2 (local law enforcement), 23.1-815.1 (campus police) (2021 Va. Acts Sp. Sess. I ch. 537, HB 2031, eff. July 1, 2021; in effect again from July 1, 2026).",
    "link": "https://law.lis.virginia.gov/vacode/title15.2/chapter17/section15.2-1723.2/",
+   "reviewRules": [],
+   "reviewNote": "The ban covers local and campus police. With the old State Police rules expired, how State Police are covered is not settled.",
    "ban": {
     "who": [
      "local"
@@ -960,9 +962,7 @@
     "kind": "Ban",
     "text": "Local and campus police can't buy or use face recognition unless a state law expressly allows it.",
     "except": ""
-   },
-   "reviewRules": [],
-   "reviewNote": "The ban covers local and campus police. With the old State Police rules expired, how State Police are covered is not settled."
+   }
   },
   {
    "whoFor": [
