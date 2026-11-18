@@ -241,7 +241,37 @@ const hilite = (text, q) => {
   const words = q.split(/\s+/).filter(w => w.length > 1).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return words.length ? t.replace(new RegExp(`(${words.join('|')})`, 'gi'), '<mark>$1</mark>') : t;
 };
-const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>“${hilite(unq(q.text), hl)}”</blockquote>`;
+/* Quote markup: bold the words that carry each protection, flag carve-outs as exceptions. */
+const KEYW = {
+  '1': /\b(search warrants?|warrants?|court orders?|probable cause|neutral and detached magistrate|magistrate|judges?|subpoenas?)\b/gi,
+  '2': /\b(disclose[sd]?|disclosure|provided notice|notice|notif(?:y|ied|ication)|defendants?|prior to trial|discovery)\b/gi,
+  '3': /\b(serious crimes?|felon(?:y|ies)|violent crimes?|crimes? of violence|punishable by a term of imprisonment of one year or more|one year or more)\b/gi,
+  '4': /\b(sole basis|without other evidence|other evidence|in conjunction with other lawfully obtained information|in conjunction with|positive identification)\b/gi,
+  '5': /\b(accuracy score of \d+ percent|accuracy|test(?:ed|ing|s)?|vendor test(?:ing)?|national institute of standards and technology|application programming interface)\b/gi,
+  '6': /\b(real[-–\s]time|live|continuous facial surveillance|continuous|ongoing surveillance|persistent tracking|passively monitoring|onboard facial recognition|during a flight|public spaces?|remote biometric identification)\b/gi,
+  '7': /\b(implicit bias training|training|trained employees?|trained|independently verified|independent visual comparison)\b/gi
+};
+const MODALW = /\b(may not|shall not|must not|is prohibited|are prohibited|prohibited|shall only|may only)\b/gi;
+const EXCW = /(except as provided in [^,;.”"]*[^,;.”"\s])|\b(except(?![^,;.]{0,60}\bwarrant\b)|exigent circumstances?|emergenc(?:y|ies)|imminent|missing persons?|deceased(?: persons?)?|sexual exploitation of children|notwithstanding|do(?:es)? not apply|warrant exceptions?|threat to human life)\b/gi;
+const XB = `<span class="xb"><img class="px" src="icons/exception.svg" alt="" width="14" height="14">Exception</span>`;
+function markup(text, rule, q) {
+  const n = text.length, tag = new Uint8Array(n), sm = new Uint8Array(n);
+  const paint = (re, arr, v) => { re.lastIndex = 0; let m; while ((m = re.exec(text))) { if (!m[0].length) { re.lastIndex++; continue; } for (let i = m.index; i < m.index + m[0].length; i++) if (arr[i] < v) arr[i] = v; } };
+  (rule ? [rule] : Object.keys(KEYW)).forEach(r => paint(KEYW[r], tag, 1)); paint(MODALW, tag, 1); paint(EXCW, tag, 2);
+  if (q) { const w = q.split(/\s+/).filter(x => x.length > 1).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); if (w.length) paint(new RegExp(w.join('|'), 'gi'), sm, 1); }
+  let out = '', i = 0, flagged = false;
+  while (i < n) {
+    let j = i; while (j < n && tag[j] === tag[i] && sm[j] === sm[i]) j++;
+    let s = esc(text.slice(i, j)); if (sm[i]) s = `<mark>${s}</mark>`;
+    if (tag[i] === 1) s = `<b class="kw">${s}</b>`;
+    if (tag[i] === 2) { s = `<span class="exc">${s}</span>`; if (!flagged && (i === 0 || tag[i - 1] !== 2)) { s = XB + s; flagged = true; } }
+    out += s; i = j;
+  }
+  return out;
+}
+const qt = h => ('“' + h + '”').replace(/^“(<span class="xb">.*?<\/span>)/, '$1“');
+const clip = (t, n) => t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
+const quoteHTML = (q, hl) => `<blockquote class="quote"><div class="qh"><cite>${esc(q.cite)}</cite><button class="copy" data-copy="${esc(unq(q.text) + ' ' + q.cite)}" aria-label="Copy quote and citation">Copy</button></div>${qt(markup(unq(q.text), q.rule, hl))}</blockquote>`;
 const quotesFor = (item, state, rule) => D.quotes.filter(q => q.state === state && q.item === item && (!rule || q.rule === rule));
 const lawLink = (href, text) => href ? `<a class="btn ghost" href="${esc(href)}" target="_blank" rel="noopener">${esc(text)} ↗</a>` : '';
 const protChips = (rules, limits = {}) => rules.length ? `<div class="pchips">${rules.map(r => `<span class="pb ${limits[r] ? 'pb-part' : 'pb-yes'}" data-tip="${esc(PROT[r].long + (limits[r] ? ' Limited: ' + plainLimit(limits[r]) + '.' : ''))}">${img(PICON[r], 18)}${esc(PROT[r].short)}${limits[r] ? '<i>limited</i>' : ''}</span>`).join('')}</div>` : '<div class="pchips"><span class="pb pb-none">None of the 7</span></div>';
@@ -696,49 +726,43 @@ function renderCompare() {
 $('cmp-mode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { S.cmode = b.dataset.m; saveHash(); renderCompare(); } });
 document.addEventListener('click', e => { const b = e.target.closest('[data-cmplaws]'); if (b) { closeDrawer(); S.cmode = 'laws'; S.prot = b.dataset.cmplaws; setTab('compare'); } });
 
-/* Compare laws: every law and bill provision for one protection, grouped by the form it takes. */
-let CLBILLS = true;
-// Near-duplicate codings shown as one form (each item's own wording is still listed).
-const MERGE = { 'adds an offense': 'adds offenses', 'court order, ongoing surveillance only': 'ongoing surveillance only', 'for ongoing, real-time or persistent tracking use only': 'ongoing surveillance only' };
-function formsFor(rule) {
-  const items = [...D.laws.map(x => ({ ...x, kind: 'law' })), ...D.bills.map(x => ({ ...x, kind: 'bill' }))].filter(x => x.rules.includes(rule));
-  const groups = new Map();
-  for (const x of items) {
-    const raw = x.limits[rule] || '', lim = MERGE[raw.toLowerCase()] || raw;
-    const scope = [x.source && !/drone|body/i.test(raw) ? `only covers ${SRC_FOR[x.source]}` : '', x.db ? "only covers searches of driver's license photos" : '',
-      !broad(x) ? `only binds ${x.whoFor.map(w => WHO_FOR[w]).join(' and ')}` : ''].filter(Boolean);
-    const key = (lim.toLowerCase() || 'full') + '|' + scope.join(';');
-    if (!groups.has(key)) groups.set(key, { lim, scope, items: [], variants: new Set() });
-    if (raw && raw.toLowerCase() !== lim.toLowerCase()) groups.get(key).variants.add(plainLimit(raw));
-    groups.get(key).items.push(x);
-  }
-  return [...groups.values()].sort((p, q) => (!p.lim && !p.scope.length ? -1 : 0) - (!q.lim && !q.scope.length ? -1 : 0)
-    || q.items.filter(x => x.kind === 'law').length - p.items.filter(x => x.kind === 'law').length || q.items.length - p.items.length);
+/* Compare laws: every law and bill provision for one protection. Scenario limits show as exceptions. */
+let CLBILLS = true, CLF = 'all';
+const ADDS = /^adds? (an )?offenses?$/i;
+function limitsOf(x, r) {
+  const raw = x.limits[r] || '', out = [];
+  if (raw) { const t = plainLimit(raw).replace(/^it /, '').replace(/^./, c => c.toUpperCase()); out.push({ adds: ADDS.test(raw), weak: !ADDS.test(raw) && !/^(would )?only /i.test(t), t }); }
+  if (x.source && !/drone|body/i.test(raw)) out.push({ t: `Only covers ${SRC_FOR[x.source]}` });
+  if (x.db) out.push({ t: "Only covers searches of driver's license photos" });
+  if (!broad(x)) out.push({ t: `Only binds ${x.whoFor.map(w => WHO_FOR[w]).join(' and ')}` });
+  return out;
 }
 function renderCompareLaws() {
-  const r = S.prot, forms = formsFor(r);
-  const laws = forms.flatMap(f => f.items).filter(x => x.kind === 'law'), bills = forms.flatMap(f => f.items).filter(x => x.kind === 'bill');
-  const nStates = list => new Set(list.map(x => x.state)).size;
+  const r = S.prot;
+  const all = [...D.laws.map(x => ({ ...x, kind: 'law' })), ...D.bills.map(x => ({ ...x, kind: 'bill' }))].filter(x => x.rules.includes(r))
+    .map(x => ({ ...x, lims: limitsOf(x, r) })).map(x => ({ ...x, exc: x.lims.some(l => !l.adds) }));
+  const pool = all.filter(x => CLBILLS || x.kind === 'law');
+  const nExc = pool.filter(x => x.exc).length, nFull = pool.length - nExc;
+  const shown = pool.filter(x => CLF === 'all' || (CLF === 'exc' ? x.exc : !x.exc))
+    .sort((p, q) => (p.kind === 'law' ? 0 : 1) - (q.kind === 'law' ? 0 : 1) || (p.exc ? 1 : 0) - (q.exc ? 1 : 0) || p.state.localeCompare(q.state));
+  const nl = pool.filter(x => x.kind === 'law').length, nb = pool.length - nl;
   const qFor = x => D.quotes.filter(q => q.state === x.state && q.item === x.name && q.rule === r);
-  const head = `<div class="clpick" role="group" aria-label="Pick a protection">${PORDER.map(k => `<button class="clp" data-clp="${k}" aria-pressed="${k === r}" aria-label="${esc(PROT[k].short)}" data-tip="${esc(PROT[k].long)}">${img(PICON[k], 26)}<span>${esc(PROT[k].short)}</span></button>`).join('')}</div>
-    <div class="clhead">${img(PICON[r], 44)}<div><h2>${esc(PROT[r].short)}: ${forms.length} different version${forms.length === 1 ? '' : 's'}</h2><p>${esc(PROT[r].long)} <span class="muted">${laws.length} law${laws.length === 1 ? '' : 's'} in ${nStates(laws)} state${nStates(laws) === 1 ? '' : 's'}, ${bills.length} bill${bills.length === 1 ? '' : 's'} in ${nStates(bills)}.</span></p></div>
-      <div class="seg2" role="group" aria-label="What to include"><button data-clb="1" aria-pressed="${CLBILLS}">Laws and bills</button><button data-clb="0" aria-pressed="${!CLBILLS}">Laws only</button></div></div>`;
-  const card = f => {
-    const its = f.items.filter(x => CLBILLS || x.kind === 'law'); if (!its.length) return '';
-    const full = !f.lim && !f.scope.length;
-    const title = full ? 'The full rule, no limits' : f.lim ? plainLimit(f.lim).replace(/^it /, '').replace(/^./, c => c.toUpperCase()) : 'Full rule, narrow reach';
-    const nl = its.filter(x => x.kind === 'law').length, nb = its.length - nl;
-    return `<section class="clform ${full ? 'cl-full' : 'cl-lim'}">
-      <div class="clft">${img(full ? 'shield-yes' : 'shield-part', 30)}<div><h3>${esc(title)}</h3>${f.variants.size ? `<p class="clvar">Includes: ${[...f.variants].map(esc).join('; ')}</p>` : ''}${f.scope.length ? `<p class="clscope">${f.scope.map(s => `<span class="pb pb-none">${esc(s.replace(/^./, c => c.toUpperCase()))}</span>`).join('')}</p>` : ''}</div>
-        <div class="clcount">${nl ? `<span class="pb pb-yes">${nl} law${nl > 1 ? 's' : ''}</span>` : ''}${nb ? `<span class="pb pb-have">${nb} bill${nb > 1 ? 's' : ''}</span>` : ''}</div></div>
-      <div class="clitems">${its.sort((p, q) => (p.kind === 'law' ? 0 : 1) - (q.kind === 'law' ? 0 : 1) || p.state.localeCompare(q.state)).map(x => { const q = qFor(x);
-        return `<button class="clitem ${x.kind}" ${x.kind === 'law' ? lawRef(x) : billRef(x)}><span class="clst">${esc(ABBR[x.state] || x.state)}</span><span class="clbody"><b>${esc(x.state)} · ${esc(x.name)}</b>${x.kind === 'bill' ? billStatus(x) : '<span class="tagline t-yes">Law</span>'}
-          ${q.length ? q.slice(0, 2).map(qq => { const tt = unq(qq.text); return `<span class="clq">“${esc(tt.length > 220 ? tt.slice(0, 220) + '…' : tt)}”</span>`; }).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
-            : `<span class="clq noq"><span class="pb pb-none">No quote recorded</span> ${esc(x.does.length > 200 ? x.does.slice(0, 200) + '…' : x.does)}</span>`}</span></span></button>`; }).join('')}</div></section>`;
+  const head = `<div class="clpick" role="group" aria-label="Pick a protection">${PORDER.map(k => `<button class="clp" data-clp="${k}" aria-pressed="${k === r}" aria-label="${esc(PROT[k].short)}" data-tip="${esc(PROT[k].short)}">${img(PICON[k], 22)}<span>${esc(PROT[k].short)}</span></button>`).join('')}</div>
+    <div class="clhead">${img(PICON[r], 32)}<div class="clht"><h2>${esc(PROT[r].short)}</h2><p>${esc(PROT[r].long)}</p></div>
+      <div class="clctl"><div class="seg2" role="group" aria-label="Full or limited"><button data-clf="all" aria-pressed="${CLF === 'all'}">All <span class="n">${pool.length}</span></button><button data-clf="full" aria-pressed="${CLF === 'full'}">Full rule <span class="n">${nFull}</span></button><button data-clf="exc" aria-pressed="${CLF === 'exc'}">${img('exception', 16)}Has limits <span class="n">${nExc}</span></button></div>
+      <div class="seg2" role="group" aria-label="Laws or bills"><button data-clb="1" aria-pressed="${CLBILLS}">Laws + bills</button><button data-clb="0" aria-pressed="${!CLBILLS}">Laws only</button></div></div></div>`;
+  const card = x => {
+    const q = qFor(x);
+    const lims = x.lims.map(l => `<span class="cllim${l.adds ? ' adds' : ''}">${l.adds ? '<span class="xb xb-add">+ Adds</span>' : l.weak ? '<span class="xb xb-weak">Weaker</span>' : XB}${esc(l.t)}</span>`).join('');
+    const quotes = q.length ? q.slice(0, 2).map(qq => `<span class="clq">${qt(markup(clip(unq(qq.text), 240), r))}</span>`).join('') + (q.length > 2 ? `<span class="clmore">+${q.length - 2} more quote${q.length > 3 ? 's' : ''}</span>` : '')
+      : `<span class="clq noq"><span class="pb pb-none">No quote recorded</span> ${esc(clip(x.does, 200))}</span>`;
+    return `<button class="clitem ${x.kind}${x.exc ? ' isexc' : ''}" ${x.kind === 'law' ? lawRef(x) : billRef(x)}><span class="clst">${esc(ABBR[x.state] || x.state)}</span><span class="clbody"><span class="clname"><b>${esc(x.state)} · ${esc(x.name)}</b>${x.kind === 'bill' ? billStatus(x) : '<span class="tagline t-yes">Law</span>'}</span>${lims}${quotes}</span></button>`;
   };
-  $('cmp-grid').innerHTML = head + `<div class="clforms">${forms.map(card).join('')}</div>`;
-  $('cmp-grid').querySelectorAll('[data-clp]').forEach(b => b.onclick = () => { S.prot = b.dataset.clp; saveHash(); renderCompareLaws(); });
+  $('cmp-grid').innerHTML = head + (shown.length ? `<div class="clgrid">${shown.map(card).join('')}</div>`
+    : `<div class="empty">${img('law', 56)}<b style="font:600 18px var(--head);color:var(--navy)">None here</b><span>No ${CLBILLS ? 'law or bill' : 'law'} matches this filter.</span></div>`);
+  $('cmp-grid').querySelectorAll('[data-clp]').forEach(b => b.onclick = () => { S.prot = b.dataset.clp; CLF = 'all'; saveHash(); renderCompareLaws(); });
   $('cmp-grid').querySelectorAll('[data-clb]').forEach(b => b.onclick = () => { CLBILLS = b.dataset.clb === '1'; renderCompareLaws(); });
+  $('cmp-grid').querySelectorAll('[data-clf]').forEach(b => b.onclick = () => { CLF = b.dataset.clf; renderCompareLaws(); });
 }
 $('cmp-grid').addEventListener('click', e => { const b = e.target.closest('[data-cmpprot]'); if (b) { const [st, r] = b.dataset.cmpprot.split('|'); protDrawer(st, r); } });
 
@@ -780,7 +804,7 @@ function renderLaws() {
     if (k === 'name') return `<span class="t">${hilite(r.name, qq)}${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.step ? billStatus(r) : ''}</span>`;
     if (k === 'item') return `<span class="t">${hilite(r.item, qq)}<span class="tagline t-no">${r.kind === 'Law' ? 'law' : 'bill'}</span></span>`;
     if (k === 'does') return `<span class="d">${hilite(r.does.length > 170 ? r.does.slice(0, 170) + '…' : r.does, qq)}</span>`;
-    if (k === 'text') { const t = unq(r.text); return `<span class="d q">“${hilite(t.length > 200 ? t.slice(0, 200) + '…' : t, qq)}”</span>`; }
+    if (k === 'text') return `<span class="d q">${qt(markup(clip(unq(r.text), 200), r.rule, qq))}</span>`;
     if (k === 'rules') return r.step ? billImpact(r) : protChips(r.rules, r.limits);
     if (k === 'rule') return `<div class="pchips"><span class="pb pb-yes">${img(PICON[r.rule], 18)}${esc(PROT[r.rule].short)}</span></div>`;
   };
