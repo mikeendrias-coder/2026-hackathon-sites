@@ -818,3 +818,13 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 
 .tip.on { pointer-events: auto; }
 @media (max-width: 900px) and (min-width: 361px) { .seg .label { white-space: nowrap; } }
+
+/* ---------- bans, live bills, not-applicable ---------- */
+.tile.lb { background: repeating-linear-gradient(135deg, var(--navy) 0 4px, #33427A 4px 8px); color: var(--lime); box-shadow: inset 0 0 0 1.5px var(--lime); }
+.sw-ban { background: repeating-linear-gradient(135deg, var(--navy) 0 3px, #33427A 3px 6px); box-shadow: inset 0 0 0 1px var(--lime); }
+.tagline.t-alive { background: var(--lime); color: var(--navy); }
+.tagline.t-over { background: var(--paper); color: var(--slate); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.res.stoprow { background: var(--lime); border-radius: 12px; padding: var(--s3); margin-bottom: var(--s2); }
+.prot.banrow { background: var(--lime); }
+.quote .qprot.qrel { border-color: var(--field); color: var(--slate); padding-left: 10px; }
+.cb.cb-na { background: #fff; color: var(--slate); box-shadow: inset 0 0 0 1.5px var(--rule-2); }
