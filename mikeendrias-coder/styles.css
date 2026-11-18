@@ -428,7 +428,8 @@ mark { background: var(--lime); color: inherit; padding: 0 1px; border-radius: 2
 button[data-tip], .tile, .station { cursor: pointer; }
 
 /* motion control (WCAG 2.2.2): one switch pauses everything that moves */
-body.still *, body.still *::before, body.still *::after { animation-play-state: paused !important; transition: none !important; }
+/* paused motion: remove animations entirely, so nothing is left frozen on a hidden first frame */
+body.still *, body.still *::before, body.still *::after { animation: none !important; transition: none !important; }
 body.still .sky, body.still .wscene .w { display: none; }
 .motion img { width: 22px; height: 22px; }
 .motion[aria-pressed="true"] { background: var(--lime); color: var(--navy); border-color: var(--lime); }
@@ -723,3 +724,44 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .clmore { flex-basis: 100%; font-size: 12.5px; color: var(--slate); }
 .clvar { font-size: 13px; margin-top: 4px; opacity: .85; }
 .dd-btn .dd-val { overflow: visible; padding-bottom: 1px; }
+
+/* ---------- step card: answer first, then details, then why ---------- */
+.answer { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--s4); align-items: center; padding: var(--s4); border-radius: 14px; margin: var(--s2) 0 var(--s4); }
+.answer img { width: 44px; height: 44px; background: #fff; border-radius: 10px; padding: 4px; box-sizing: content-box; }
+.answer > div { display: flex; flex-direction: column; gap: 8px; }
+.answer b { font: 600 20px/1.25 var(--head); letter-spacing: -.01em; }
+.a-yes { background: var(--peri-ink); color: #fff; } .a-yes .label { color: var(--cyan); }
+.a-would { background: var(--lime); color: var(--navy); }
+.a-part { background: var(--cyan); color: var(--navy); }
+.a-no { background: #FDE3E1; color: #8E1B12; } .a-no .label { color: #8E1B12; }
+.a-skip { background: var(--paper); color: var(--slate); }
+.sublabel { margin: 0 0 2px; }
+.why { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--s3); align-items: start; margin-top: var(--s4); padding: var(--s3) var(--s4); border-radius: 12px; background: var(--navy); color: #fff; }
+.why img { width: 22px; height: 22px; margin-top: 2px; }
+.why .label { color: var(--lime); margin-bottom: 6px; }
+.why p { font-size: 15px; line-height: 1.5; }
+.howline { display: flex; align-items: center; gap: 10px; margin-top: var(--s3); font-size: 14.5px; line-height: 1.45; color: var(--navy); position: relative; }
+.howline img { width: 22px; height: 22px; flex: none; }
+
+/* ---------- dropdowns open out of their own box ---------- */
+.dd-btn, .dd-btn.select, .dd-btn.dd-plain { background-image: none !important; }
+.dd-btn.select { padding-right: 16px; }
+.dd-btn.dd-plain { padding-right: 0; }
+.dd-chev { width: 24px; height: 24px; border-radius: 50%; flex: none; margin-left: 10px; display: grid; place-items: center; color: var(--navy); transition: transform .15s, background .15s; }
+.dd-btn:hover .dd-chev { background: var(--cyan-2); }
+.dd-btn.open .dd-chev { transform: rotate(180deg); background: var(--lime); }
+.seg { transition: background .15s; border-radius: 0; }
+.seg.dd-anchor { background: var(--cyan-2); box-shadow: inset 0 0 0 2px var(--peri-ink); border-radius: 16px; }
+.seg.dd-anchor .label { color: var(--peri-ink); }
+.dd-btn.select.open { border-color: var(--peri-ink); box-shadow: 0 0 0 3px rgba(63,82,232,.18); }
+.dd-btn.dd-plain.open { color: var(--navy); }
+.dd-pop { overflow: visible; padding: 6px; border-color: var(--peri-ink); }
+.dd-pop::before { content: ""; position: absolute; top: -8px; left: var(--cx, 24px); width: 14px; height: 14px; background: #fff; border-left: 1.5px solid var(--peri-ink); border-top: 1.5px solid var(--peri-ink); transform: translateX(-50%) rotate(45deg); }
+.dd-pop.up::before { top: auto; bottom: -8px; transform: translateX(-50%) rotate(225deg); }
+.dd-pop { overflow: visible; }
+.dd-list { overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.dd-opt { justify-content: space-between; padding: 10px 12px; }
+.dd-opt .dd-txt { text-box: trim-both cap alphabetic; white-space: normal; }
+.dd-opt.on { font-weight: 700; background: #F3FFD0; }
+.dd-opt.act { background: var(--cyan-2); }
+.dd-check { width: 22px; height: 22px; border-radius: 50%; flex: none; background: var(--navy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath fill='%23E2FE90' d='M1 4h1v1H1zM2 5h1v1H2zM3 6h1v1H3zM4 5h1v1H4zM5 4h1v1H5zM6 3h1v1H6zM7 2h1v1H7z'/%3E%3C/svg%3E") no-repeat center / 14px; }

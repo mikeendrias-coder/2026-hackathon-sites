@@ -1,5 +1,5 @@
-"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment, clipped text, overlaps, target size, text size,
-broken images, reflow, keyboard focus, console errors, and no browser-native dropdowns, tooltips or autofill."""
+"""Face Value QA: WCAG 2.2 AA (axe-core), optical alignment, clipped text, overlaps, target size, text size, broken images,
+reflow, keyboard focus, console errors, no browser-native controls, content visible with motion paused, dropdowns attached to their box."""
 import asyncio, json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 URL = os.environ.get('FV_URL', 'http://localhost:8765/index.html')
@@ -107,6 +107,29 @@ async def focus_walk(pg, n=60):
     if r and (not r['ring'] or r['hidden'] or r['off']): bad.append(r)
     await pg.keyboard.press('Tab')
   return bad
+
+async def motion_and_dropdown(b):
+  bad = []
+  for label, kw, init in [('reduced-motion', {'reduced_motion': 'reduce'}, ''), ('paused-motion', {}, "try{localStorage.setItem('fv-still','1')}catch(e){}")]:
+    ctx = await b.new_context(viewport={'width': 1440, 'height': 900}, **kw)
+    if init: await ctx.add_init_script(init)
+    pg = await ctx.new_page()
+    for url in ['#tab=case&state=Maryland', '#tab=state&state=Maryland', '#tab=compare&state=Maryland&cmode=states']:
+      await pg.goto('about:blank'); await pg.goto(URL + url); await pg.wait_for_timeout(700)
+      hid = await pg.evaluate("""() => [...document.querySelectorAll('.res, .answer, .shields img, .prot, .cb, .stamp, .tally > div')].filter(e => { const r = e.getBoundingClientRect(); if (!r.width) return false; let o = 1; for (let p = e; p; p = p.parentElement) o *= +getComputedStyle(p).opacity; return o < 0.9; }).map(e => e.className).slice(0, 5)""")
+      if hid: bad.append(f'{label} {url}: content stuck invisible {hid}')
+    await ctx.close()
+  ctx = await b.new_context(viewport={'width': 1440, 'height': 900}); pg = await ctx.new_page()
+  await pg.goto(URL + '#tab=case&state=Maryland'); await pg.wait_for_timeout(700)
+  for k in range(5):
+    btns = await pg.query_selector_all('.fbar .dd-btn'); await btns[k].click(); await pg.wait_for_timeout(250)
+    d = await pg.evaluate("""() => { const p = document.querySelector('.dd-pop'); const a = document.querySelector('.dd-anchor'); if (!p || p.hidden || !a) return 'no popup'; const pr = p.getBoundingClientRect(), ar = a.getBoundingClientRect();
+      return { dl: +(pr.left - ar.left).toFixed(1), dw: +(pr.width - Math.max(ar.width, 180)).toFixed(1), gap: +(pr.top - ar.bottom).toFixed(1) }; }""")
+    if d == 'no popup' or abs(d['dl']) > 1.5 or abs(d['dw']) > 1.5 or not (6 <= d['gap'] <= 16): bad.append(f'dropdown {k} not attached to its box: {d}')
+    await pg.keyboard.press('Escape'); await pg.wait_for_timeout(150)
+  await ctx.close()
+  return bad
+
 async def run():
   async with async_playwright() as p:
     b = await p.chromium.launch(args=['--no-sandbox'])
@@ -137,6 +160,9 @@ async def run():
       for x in fb[:6]: print('    focus', x)
       print(f"[{w}] console errors: {errs}"); total += len(errs)
       await ctx.close()
+    mb = await motion_and_dropdown(b)
+    for x in mb: print('    extra  ', x)
+    total += len(mb)
     await b.close()
     print('TOTAL ISSUES', total)
 asyncio.run(run())

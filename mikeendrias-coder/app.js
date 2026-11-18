@@ -488,6 +488,7 @@ const stepX = i => 4 + (92 * (i + 0.5)) / STEPS.length;
 function restartCase(animate) {
   CASE = computeCase(S.state, S);
   const w = find(WHO, S.who), so = find(SRC, S.src), d = find(DB, S.db), c = find(CRIME, S.crime);
+  $('howline').innerHTML = `${img('who-' + S.who, 22)}<span>Each stop on the road is a point where a state law could step in. Press <b>Next step</b> to move the search along, or tap any stop.</span>`;
   $('question').innerHTML = `In <span class="hl">${esc(S.state)}</span>, ${S.who === 'federal' ? term('federal agent', 'a federal agent') + ' has' : esc(w[2]) + ' have'} <span class="hl">${esc(so[2])}</span> from ${esc(c[2])}. They search it against <span class="hl">${S.db === 'dmv' ? term('dmv', d[2]) : term('mugshots', 'mugshots')}</span>. What stops them?`;
   buildTrack();
   go(0, animate);
@@ -497,6 +498,28 @@ function buildTrack() {
     STEPS.map((s, i) => `<button class="station" data-i="${i}" style="left:${stepX(i)}%" aria-label="Step ${i + 1}: ${esc(s.short)}" data-tip="Step ${i + 1}: ${esc(s.title)}">${img(s.icon, 34)}<span class="gate"></span><span class="lbl">${esc(s.short)}</span></button>`).join('') +
     `<div class="walker" id="walker" style="left:${stepX(0)}%">${img('who-' + S.who, 44)}${img('src-' + S.src, 24, 'small')}<span class="bubble" id="bubble"></span></div>`;
   $('track').onclick = e => { const b = e.target.closest('.station'); if (b) go(+b.dataset.i, true); };
+}
+const WHY = {
+  crime: 'Some states only allow face recognition for serious crimes. If the crime is not on the list, the search has to stop here.',
+  approval: 'A judge reviewing the request first is the strongest check. Without one, police decide on their own whether to run the search.',
+  search: 'These rules control how the search is run: no scanning crowds live, software tested for accuracy, and only trained staff at the controls.',
+  arrest: 'Face recognition can point to the wrong person. Some states require other evidence before police can arrest someone or put them in a lineup.',
+  disclose: 'If the person charged is never told face recognition was used, they cannot challenge a possible mistake in court.'
+};
+// The state's answer at this step, in one line.
+function answerBox(agg) {
+  const st = esc(S.state);
+  const A = {
+    covered: ['yes', 'shield-yes', `Yes. ${st} law steps in here.`],
+    stop: ['yes', 'shield-yes', `Yes, and the search stops here.`],
+    would: ['would', 'shield-yes', `Not today. Your what if would cover it.`],
+    partial: ['part', 'shield-part', `Partly. ${st} has a rule here, with a catch.`],
+    review: ['part', 'shield-part', `Unclear. ${st}'s rule may not cover this agent.`],
+    bypassed: ['no', 'shield-no', `No. ${st} has a law, but it misses this case.`],
+    gap: ['no', 'shield-no', `No. Nothing in ${st} law steps in here.`],
+    skip: ['skip', 'shield-empty', `This step never happens. The search was already stopped.`]
+  }[agg] || ['no', 'shield-no', `No. Nothing in ${st} law steps in here.`];
+  return `<div class="answer a-${A[0]}">${img(A[1], 44)}<div><div class="label">${st}'s answer</div><b>${A[2]}</b></div></div>`;
 }
 function narration(s) {
   const st = S.state;
@@ -593,12 +616,15 @@ function go(i, animate) {
   });
   $('stephead').innerHTML = `${img(s.icon, 56)}<div><div class="stepno">STEP ${i + 1} OF ${STEPS.length}</div><div class="stitle">${esc(s.title)}</div></div>`;
   let html = `<p class="narr">${narration(s)}</p>`;
-  if (s.agg === 'skip') html += `<div class="res">${img('shield-yes', 34)}<div><div class="rs">This step never happens. The search was stopped at step ${CASE.stopAt + 1}.</div></div><span></span></div>`;
+  if (s.agg === 'skip') html += answerBox('skip');
   else {
+    if (s.key !== 'trial') html += answerBox(s.agg);
+    if (s.key !== 'trial') html += `<div class="label sublabel">The details</div>`;
     if (s.key === 'search') html += otherLaws(S.state, S).map(otherRow).join('');
     html += s.results.map(r => resultRow(r, s)).join('');
     if (s.key === 'arrest' && !s.results.some(r => r.at === 'lineup')) html += `<p class="small muted" style="padding-top:8px;border-top:1px solid var(--rule)">${esc(S.state)} has no special rule about lineups.</p>`;
     if (s.key === 'trial') html += verdictHTML();
+    if (WHY[s.key]) html += `<div class="why">${img('spark', 22)}<div><div class="label">Why this step matters</div><p>${esc(WHY[s.key])}</p></div></div>`;
     const rules = [...new Set(s.checks.map(c => c[0]))];
     if (rules.length) html += `<div class="label" style="margin-top:var(--s4)">Across the country</div><div class="natfact">${rules.map(r => {
       const yes = D.states.filter(x => stateProt(x.name, r).level === 'yes').length, part = D.states.filter(x => stateProt(x.name, r).level === 'part').length;

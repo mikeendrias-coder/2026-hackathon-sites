@@ -24,7 +24,7 @@
     btn.className = 'dd-btn ' + (sel.classList.contains('select') ? 'select' : 'dd-plain');
     btn.setAttribute('aria-haspopup', 'listbox');
     btn.setAttribute('aria-expanded', 'false');
-    btn.innerHTML = '<span class="dd-val"></span>';
+    btn.innerHTML = '<span class="dd-val"></span><span class="dd-chev" aria-hidden="true"><svg viewBox="0 0 12 8" width="12" height="8"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="2" fill="none"/></svg></span>';
     sel.parentNode.insertBefore(btn, sel);
     sel.classList.add('dd-native'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
     sel._dd = btn; btn._sel = sel;
@@ -50,27 +50,31 @@
   function show(btn) {
     close(false);
     const sel = btn._sel, opts = [...sel.options];
-    pop.innerHTML = opts.map((o, i) => `<div class="dd-opt${o.selected ? ' on' : ''}" role="option" id="dd-o-${i}" data-i="${i}" aria-selected="${o.selected}"><span class="dd-tick" aria-hidden="true"></span><span>${o.text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</span></div>`).join('');
+    pop.innerHTML = '<div class="dd-list" role="presentation">' + opts.map((o, i) => `<div class="dd-opt${o.selected ? ' on' : ''}" role="option" id="dd-o-${i}" data-i="${i}" aria-selected="${o.selected}"><span class="dd-txt">${o.text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</span>${o.selected ? '<span class="dd-check" aria-hidden="true"></span>' : ''}</div>`).join('') + '</div>';
     pop.setAttribute('aria-label', btn.dataset.name || 'Options');
-    pop.hidden = false; btn.setAttribute('aria-expanded', 'true'); btn.classList.add('open');
-    open = { btn, sel, active: Math.max(0, sel.selectedIndex), typed: '', t: 0 };
+    const anchor = btn.closest('.seg') || btn;
+    pop.hidden = false; btn.setAttribute('aria-expanded', 'true'); btn.classList.add('open'); anchor.classList.add('dd-anchor');
+    open = { btn, sel, anchor, active: Math.max(0, sel.selectedIndex), typed: '', t: 0 };
     place(); setActive(open.active, true);
     pop.focus({ preventScroll: true });
   }
 
   function place() {
     if (!open) return;
-    const r = open.btn.getBoundingClientRect();
-    const w = Math.max(r.width, 200);
-    pop.style.minWidth = w + 'px';
+    const r = open.anchor.getBoundingClientRect();
+    const w = Math.max(r.width, 180);
+    pop.style.width = w + 'px';
     const below = innerHeight - r.bottom - 12, above = r.top - 12;
-    const h = Math.min(pop.scrollHeight, 340);
+    const list = pop.firstElementChild;
+    const h = Math.min(list.scrollHeight + 12, 340);
     const up = below < Math.min(h, 220) && above > below;
-    pop.style.maxHeight = Math.max(120, Math.min(340, up ? above : below)) + 'px';
+    list.style.maxHeight = (Math.max(120, Math.min(340, up ? above : below)) - 12) + 'px';
     let left = Math.min(r.left, innerWidth - pop.offsetWidth - 8); left = Math.max(8, left);
     pop.style.left = left + 'px';
-    pop.style.top = up ? (r.top - Math.min(pop.offsetHeight, above) - 6) + 'px' : (r.bottom + 6) + 'px';
+    pop.style.top = up ? (r.top - Math.min(pop.offsetHeight, above) - 12) + 'px' : (r.bottom + 12) + 'px';
     pop.classList.toggle('up', up);
+    const br = open.btn.getBoundingClientRect();
+    pop.style.setProperty('--cx', Math.min(w - 24, Math.max(18, br.right - 18 - left)) + 'px');
   }
 
   function setActive(i, center) {
@@ -78,10 +82,10 @@
     i = Math.max(0, Math.min(items.length - 1, i)); open.active = i;
     items.forEach((el, k) => el.classList.toggle('act', k === i));
     pop.setAttribute('aria-activedescendant', items[i].id);
-    const el = items[i];
-    if (center) pop.scrollTop = el.offsetTop - pop.clientHeight / 2 + el.offsetHeight / 2;
-    else if (el.offsetTop < pop.scrollTop) pop.scrollTop = el.offsetTop;
-    else if (el.offsetTop + el.offsetHeight > pop.scrollTop + pop.clientHeight) pop.scrollTop = el.offsetTop + el.offsetHeight - pop.clientHeight;
+    const el = items[i], L = pop.firstElementChild;
+    if (center) L.scrollTop = el.offsetTop - L.clientHeight / 2 + el.offsetHeight / 2;
+    else if (el.offsetTop < L.scrollTop) L.scrollTop = el.offsetTop;
+    else if (el.offsetTop + el.offsetHeight > L.scrollTop + L.clientHeight) L.scrollTop = el.offsetTop + el.offsetHeight - L.clientHeight;
   }
 
   function choose(i) {
@@ -95,7 +99,7 @@
 
   function close(refocus) {
     if (!open) return;
-    const b = open.btn; open = null;
+    const b = open.btn; open.anchor.classList.remove('dd-anchor'); open = null;
     pop.hidden = true; pop.innerHTML = '';
     b.setAttribute('aria-expanded', 'false'); b.classList.remove('open');
     if (refocus) b.focus({ preventScroll: true });
