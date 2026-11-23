@@ -273,7 +273,7 @@ p { margin: 0; text-wrap: pretty; }
 .pchip { font: 500 11.5px var(--body); padding: 2px 8px; border-radius: 999px; background: var(--navy); color: #fff; white-space: nowrap; }
 .pchip.lim { background: var(--cyan); color: var(--navy); }
 .pchip.none { background: var(--paper); color: var(--slate); }
-mark { background: var(--lime); color: inherit; padding: 0 1px; border-radius: 2px; }
+mark { background: var(--lime); color: inherit; padding: 0; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
 /* ---------- drawer ---------- */
 .scrim { position: fixed; inset: 0; background: rgba(32, 44, 83, .45); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; }

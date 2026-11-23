@@ -935,8 +935,8 @@ function renderLaws() {
   const qq = $('l-q').value.trim();
   const cell = (r, k) => {
     if (k === 'state') return `<span class="s">${esc(r.state)}</span>`;
-    if (k === 'name') return `<span class="t">${hilite(r.name, qq)}${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.step ? billStatus(r) : ''}</span>`;
-    if (k === 'item') return `<span class="t">${hilite(r.item, qq)}<span class="tagline t-no">${r.kind === 'Law' ? 'law' : 'bill'}</span></span>`;
+    if (k === 'name') return `<span class="t"><span class="tn">${hilite(r.name, qq)}</span>${r.review ? '<span class="tagline t-would">Unclear</span>' : ''}${r.step ? billStatus(r) : ''}</span>`;
+    if (k === 'item') return `<span class="t"><span class="tn">${hilite(r.item, qq)}</span><span class="tagline t-no">${r.kind === 'Law' ? 'law' : 'bill'}</span></span>`;
     if (k === 'does') return `<span class="d">${hilite(clip(r.does, 170), qq)}</span>`;
     if (k === 'text') return `<span class="d q">${qbody(r.text, r.rule, qq, 200)}</span>`;
     if (k === 'rules') return r.step ? billImpact(r) : protChips(r.rules, r.limits);
