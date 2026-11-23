@@ -907,3 +907,42 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .bubble { font-size: 11px; }
 .tile { font-size: 11px; }
 .sb-note a { display: inline-block; padding: 6px 2px; margin: -6px 0; }
+
+/* ================= PLAY COPY: real CDT assets and tokens (see ~/work/cdt-design-ref/CDT-DESIGN.md) ================= */
+:root {
+  /* official cdt.org palette */
+  --c-navy: #202C53; --c-midnight: #0A2137; --c-cobalt: #5369FF; --c-indigo: #3A4DD1; --c-periwinkle: #B4BDFE;
+  --c-sky: #BFEAFF; --c-cloud: #CAE9FF; --c-azure: #4CC6FF; --c-denim: #5D6C9D; --c-lime: #E2FE90; --c-frost: #F5F5F5;
+  --navy: var(--c-navy); --peri: var(--c-cobalt); --peri-ink: var(--c-indigo); --sky: var(--c-azure); --cyan: var(--c-sky);
+  --slate: var(--c-denim); --field: var(--c-denim); --lime: var(--c-lime); --paper: var(--c-frost);
+  --ease-move: cubic-bezier(.42, 0, .32, 1); --ease-appear: cubic-bezier(0, 0, .32, 1);
+}
+/* header: CDT logo | Face Value, like the FOSO microsite */
+.lockup { display: flex; align-items: center; gap: 14px; flex: none; }
+.cdt-logo { display: block; line-height: 0; border-radius: 4px; }
+.cdt-logo img { width: 104px; height: 34px; display: block; }
+.lockup-rule { width: 1px; height: 30px; background: rgba(255, 255, 255, .35); }
+.brand b { font: 600 22px/1 var(--head); letter-spacing: -.02em; }
+.bar .tabs { margin-left: 8px; }
+/* labels and tags: Geist 500, 13px, caps, .07em */
+.label { font-size: 13px; letter-spacing: .07em; font-weight: 500; }
+.label.dot::before { background: var(--c-cobalt); }
+/* buttons: Geist caps, .13em tracking, pill */
+.btn { font: 600 14px/1.2 var(--body); letter-spacing: .13em; transition: background-color 240ms var(--ease-move), color 240ms var(--ease-move), box-shadow 240ms var(--ease-move); }
+.btn.ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--c-navy); }
+.btn.ghost:hover:not(:disabled) { background: var(--c-navy); color: #fff; }
+.btn.lime:hover { background: var(--c-lime); box-shadow: inset 0 0 0 1px var(--c-navy); }
+/* arrows: lime circle that turns cobalt on hover, like cdt.org "Learn more" */
+.arrow { transition: background-color 240ms var(--ease-move), color 240ms var(--ease-move); }
+button:hover > .arrow, a:hover > .arrow, button:hover .end > .arrow { background: var(--c-cobalt); color: #fff; }
+/* big numbers: Geist 900, tight, like cdt.org statistics */
+.hstat b, .hud .score b, .tally .n, .cmpverdict b, .natfact .nf b { font-family: var(--body); font-weight: 900; letter-spacing: -.03em; }
+/* hero: CDT grain gradient */
+.homehero { background: url("brand/section-bg-standard.jpg") center / cover, radial-gradient(110% 160% at 10% 0%, #5369FF 0%, #3446B8 40%, var(--navy) 85%); }
+.homehero h1 { font-weight: 500; letter-spacing: -.035em; }
+@media (max-width: 1360px) and (min-width: 901px) { .tab img { display: none; } .tab { padding: 6px 14px; } }
+@media (max-width: 900px) { .cdt-logo img { width: 86px; height: 28px; } .brand b { font-size: 19px; } .lockup { gap: 10px; } .lockup-rule { height: 24px; } }
+@media (max-width: 380px) { .cdt-logo img { width: 70px; height: 23px; } .brand b { font-size: 16px; } .lockup { gap: 8px; } }
+@media (max-width: 1180px) and (min-width: 901px) { .bar .pill .lt { display: none; } .bar .pill { padding-left: 10px; padding-right: 10px; } }
+.bar .brand { min-height: 44px; } .label { line-height: 1.2; }
+.cdt-logo { padding: 8px 0; margin: -8px 0; }
