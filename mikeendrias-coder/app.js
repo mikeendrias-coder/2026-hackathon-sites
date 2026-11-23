@@ -146,20 +146,72 @@ const mapLevel = name => {
 };
 
 /* ================= app state (kept in the address) ================= */
-const HAD_HASH = location.hash.length > 1;
-const S = { cmode: 'states', prot: '1', tab: HAD_HASH ? 'state' : 'home', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana' };
-const KEYS = ['tab', 'state', 'who', 'src', 'db', 'crime', 'cmode', 'prot'];
-try {
-  const h = new URLSearchParams(location.hash.slice(1));
-  KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); });
-} catch (e) {}
-if (!D.states.some(s => s.name === S.state)) S.state = 'Maryland';
-if (!['home', 'state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'home';
-if (!['states', 'laws'].includes(S.cmode)) S.cmode = 'states'; if (!PROT[S.prot]) S.prot = '1';
-if (!find(WHO, S.who)) S.who = 'local'; if (!find(SRC, S.src)) S.src = 'photo'; if (!find(DB, S.db)) S.db = 'dmv'; if (!find(CRIME, S.crime)) S.crime = 'serious';
+/* ================= the address: short, readable links =================
+   Home has no address at all. Otherwise:
+   #/maryland                  state scorecard
+   #/maryland/case?who=federal case (only settings that differ from the default)
+   #/compare/maryland/montana  compare two states
+   #/compare/laws/judge        compare every version of one protection
+   #/laws, #/laws/bills?q=x    read the laws
+   Old links (#tab=case&state=Maryland&...) still open and are rewritten. */
+const S = { cmode: 'states', prot: '1', tab: 'home', state: 'Maryland', who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana', cmpB: 'Montana', lt: 'laws', q: '', ls: '', lp: '', lss: '' };
+const CASE_DEF = { who: 'local', src: 'photo', db: 'dmv', crime: 'serious', step: 0, whatif: 'none', model: 'Montana' };
+const slug = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const stateBySlug = x => (D.states.find(s => slug(s.name) === slug(x)) || {}).name;
+const PSLUG = { '1': 'judge', '2': 'told', '3': 'serious-crimes', '4': 'match', '5': 'accuracy', '6': 'crowds', '7': 'training' };
+const protBySlug = x => Object.keys(PSLUG).find(k => PSLUG[k] === x || k === x);
+const LTSLUG = { laws: '', bills: 'bills', quotes: 'wording' };
+const readHash = () => {
+  Object.assign(S, { tab: 'home', cmode: 'states', step: 0, whatif: 'none', lt: 'laws', q: '', ls: '', lp: '', lss: '' }, CASE_DEF);
+  try {
+    const raw = location.hash.slice(1);
+    if (raw && !raw.startsWith('/')) {
+      // old style: #tab=...&state=...
+      const h = new URLSearchParams(raw);
+      ['tab', 'state', 'who', 'src', 'db', 'crime', 'cmode', 'prot', 'cmpB'].forEach(k => { if (h.get(k)) S[k] = h.get(k); });
+    } else if (raw) {
+      const [path, qs] = raw.slice(1).split('?');
+      const parts = path.split('/').filter(Boolean).map(decodeURIComponent), q = new URLSearchParams(qs || '');
+      if (parts[0] === 'laws') {
+        S.tab = 'laws'; S.lt = Object.keys(LTSLUG).find(k => LTSLUG[k] === (parts[1] || '')) || 'laws';
+        S.q = q.get('q') || ''; S.ls = stateBySlug(q.get('state') || '') || ''; S.lp = protBySlug(q.get('p') || '') || ''; S.lss = q.get('status') || '';
+      } else if (parts[0] === 'compare') {
+        S.tab = 'compare';
+        if (parts[1] === 'laws') { S.cmode = 'laws'; S.prot = protBySlug(parts[2] || '') || '1'; }
+        else { if (stateBySlug(parts[1] || '')) S.state = stateBySlug(parts[1]); if (stateBySlug(parts[2] || '')) S.cmpB = stateBySlug(parts[2]); }
+      } else if (stateBySlug(parts[0] || '')) {
+        S.state = stateBySlug(parts[0]);
+        S.tab = parts[1] === 'case' ? 'case' : 'state';
+        Object.keys(CASE_DEF).forEach(k => { if (q.has(k)) S[k] = q.get(k); });
+        if (q.has('step')) S.step = (parseInt(q.get('step'), 10) || 1) - 1; // step=1 is the first step, as on screen
+        if (q.has('copy')) S.model = stateBySlug(q.get('copy')) || S.model;
+      }
+    }
+  } catch (e) {}
+  if (!D.states.some(s => s.name === S.state)) S.state = 'Maryland';
+  if (!['home', 'state', 'case', 'compare', 'laws'].includes(S.tab)) S.tab = 'home';
+  if (!['states', 'laws'].includes(S.cmode)) S.cmode = 'states'; if (!PROT[S.prot]) S.prot = '1';
+  if (!find(WHO, S.who)) S.who = 'local'; if (!find(SRC, S.src)) S.src = 'photo'; if (!find(DB, S.db)) S.db = 'dmv'; if (!find(CRIME, S.crime)) S.crime = 'serious';
+  S.step = Math.max(0, Math.min(5, parseInt(S.step, 10) || 0));
+  if (!['none', 'bills', 'borrow'].includes(S.whatif)) S.whatif = 'none';
+  ['model', 'cmpB'].forEach(k => { if (!D.states.some(x => x.name === S[k])) S[k] = 'Montana'; });
+};
+const hashFor = () => {
+  const st = slug(S.state), qs = o => { const u = new URLSearchParams(Object.entries(o).filter(([, v]) => v !== '' && v != null)); const t = u.toString(); return t ? '?' + t : ''; };
+  if (S.tab === 'home') return '';
+  if (S.tab === 'state') return `#/${st}`;
+  if (S.tab === 'case') {
+    const o = {}; ['who', 'src', 'db', 'crime', 'step', 'whatif'].forEach(k => { if (String(S[k]) !== String(CASE_DEF[k])) o[k] = k === 'step' ? S.step + 1 : S[k]; });
+    if (S.whatif === 'borrow') o.copy = slug(S.model);
+    return `#/${st}/case${qs(o)}`;
+  }
+  if (S.tab === 'compare') return S.cmode === 'laws' ? `#/compare/laws/${PSLUG[S.prot]}` : `#/compare/${st}/${slug(S.cmpB === S.state ? (S.state === 'Montana' ? 'Maryland' : 'Montana') : S.cmpB)}`;
+  return `#/laws${LTSLUG[S.lt] ? '/' + LTSLUG[S.lt] : ''}${qs({ q: S.q, state: S.ls && slug(S.ls), p: S.lp && PSLUG[S.lp], status: S.lss })}`;
+};
+readHash();
 const say = t => { const el = $('sr-live'); if (el) { el.textContent = ''; setTimeout(() => el.textContent = t, 30); } };
 let lastTab = S.tab;
-const saveHash = () => { try { const h = '#' + new URLSearchParams(Object.fromEntries(KEYS.map(k => [k, S[k]]))); if (S.tab !== lastTab) history.pushState(null, '', h); else history.replaceState(null, '', h); lastTab = S.tab; } catch (e) {} };
+const saveHash = () => { try { const h = hashFor() || location.pathname + location.search; if (h === (location.hash || location.pathname + location.search)) { lastTab = S.tab; return; } if (S.tab !== lastTab) history.pushState(null, '', h); else history.replaceState(null, '', h); lastTab = S.tab; } catch (e) {} };
 
 /* ================= the legal logic (from v1) ================= */
 const WHO_FOR = { local: 'local police', state: 'state agencies', any: 'anyone' };
@@ -731,12 +783,13 @@ function go(i, animate) {
   if (READY) { const a = $('stepbody').querySelector('.answer b, .verdict-row + p'); say(`Step ${i + 1} of ${STEPS.length}: ${s.title} ${a ? a.textContent : ''}`); }
   const wi = $('stepbody').querySelector('.whatif');
   if (wi) {
-    wi.onclick = e => { const b = e.target.closest('[data-w]'); if (b) { S.whatif = b.dataset.w; CASE = computeCase(S.state, S); go(STEPS.length - 1, false); } };
+    wi.onclick = e => { const b = e.target.closest('[data-w]'); if (b) { S.whatif = b.dataset.w; CASE = computeCase(S.state, S); buildTrack(); go(STEPS.length - 1, false); } };
     const m = $('model'); if (m) m.onchange = e => { S.model = e.target.value; CASE = computeCase(S.state, S); go(STEPS.length - 1, false); };
   }
   $('stepbody').querySelectorAll('[data-stepjump]').forEach(b => b.onclick = () => go(+b.dataset.stepjump, true));
   $('back').disabled = i === 0;
   const last = i === STEPS.length - 1;
+  if (READY) saveHash();
   $('next').innerHTML = (last ? 'More stories' : CASE.stopAt >= 0 && i >= CASE.stopAt ? 'Skip to the result' : 'Next step') + ' <span aria-hidden="true">→</span>';
 }
 const nextStep = () => { const i = S.step; if (i === STEPS.length - 1) return storiesDrawer(); go(CASE.stopAt >= 0 && i >= CASE.stopAt ? STEPS.length - 1 : i + 1, true); };
@@ -792,7 +845,7 @@ function renderCompare() {
   $('cmp-grid').innerHTML = `<div class="cmpcols">${col(A, ca, kA, kB, 'a')}<span class="vs" aria-hidden="true">VS</span>${col(B, cb, kB, kA, 'b')}</div>
     <p class="cmpnote">${diffs ? `<span class="count sm">${diffs}</span> difference${diffs > 1 ? 's' : ''} between ${esc(A)} and ${esc(B)}, outlined in lime.` : `${esc(A)} and ${esc(B)} come out the same for this case.`} Select any badge to read the law.</p>`;
   $('cmp-a').onchange = e => setState(e.target.value);
-  $('cmp-b').onchange = e => { S.cmpB = e.target.value; renderCompare(); };
+  $('cmp-b').onchange = e => { S.cmpB = e.target.value; saveHash(); renderCompare(); };
 }
 $('cmp-mode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { S.cmode = b.dataset.m; saveHash(); renderCompare(); } });
 document.addEventListener('click', e => { const b = e.target.closest('[data-cmplaws]'); if (b) { closeDrawer(); S.cmode = 'laws'; S.prot = b.dataset.cmplaws; setTab('compare'); } });
@@ -840,7 +893,7 @@ function renderCompareLaws() {
 $('cmp-grid').addEventListener('click', e => { const b = e.target.closest('[data-cmpprot]'); if (b) { const [st, r] = b.dataset.cmpprot.split('|'); protDrawer(st, r); } });
 
 /* ================= READ THE LAWS ================= */
-let LT = 'laws', LS = { key: 'state', dir: 1 };
+let LT = S.lt, LS = { key: 'state', dir: 1 };
 const LDEF = {
   laws: { label: 'Laws in effect', rows: () => D.laws, cols: [['state', 'State'], ['name', 'Law'], ['does', 'What it does'], ['rules', 'Protections']],
     status: [['', 'Any'], ['clear', 'Settled'], ['check', 'Unclear']], ok: (r, s) => !s || (s === 'check' ? r.review : !r.review),
@@ -864,11 +917,14 @@ $('l-state').innerHTML = '<option value="">All</option>' + D.states.map(s => `<o
 $('l-prot').innerHTML = '<option value="">Any</option>' + PORDER.map(k => `<option value="${k}">${esc(PROT[k].short)}</option>`).join('');
 const statusOpts = () => LDEF[LT].status.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
 $('l-status').innerHTML = statusOpts();
+const lawsFromS = () => { LT = S.lt; $('l-status').innerHTML = statusOpts(); $('l-q').value = S.q; $('l-state').value = S.ls; $('l-prot').value = S.lp; $('l-status').value = S.lss; };
+lawsFromS();
 ['l-q', 'l-state', 'l-prot', 'l-status'].forEach(id => $(id).addEventListener('input', renderLaws));
 $('l-clear').onclick = () => { $('l-q').value = ''; $('l-state').value = ''; $('l-prot').value = ''; $('l-status').value = ''; renderLaws(); };
 function renderLaws() {
   document.querySelectorAll('#ltabs [data-lt]').forEach(b => { b.setAttribute('aria-selected', b.dataset.lt === LT); b.tabIndex = b.dataset.lt === LT ? 0 : -1; });
   const def = LDEF[LT], q = $('l-q').value.trim().toLowerCase(), st = $('l-state').value, pr = $('l-prot').value, ss = $('l-status').value;
+  Object.assign(S, { lt: LT, q: $('l-q').value.trim(), ls: st, lp: pr, lss: ss }); if (READY) saveHash();
   let rows = def.rows().filter(r => (!st || r.state === st) && (!pr || (r.rules ? r.rules.includes(pr) : r.rule === pr)) && def.ok(r, ss) &&
     (!q || q.split(/\s+/).every(w => plainMarks(JSON.stringify(r)).toLowerCase().includes(w))));
   rows = rows.slice().sort((a, b) => {
@@ -900,16 +956,19 @@ $('home').onclick = () => setTab('home');
 
 /* back and forward buttons */
 addEventListener('popstate', () => {
-  try { const h = new URLSearchParams(location.hash.slice(1)); KEYS.forEach(k => { if (h.get(k)) S[k] = h.get(k); }); } catch (e) {}
-  lastTab = S.tab; syncFilters(); setState(S.state); setTab(S.tab);
+  const st0 = S.step; readHash(); const st1 = S.step; S.step = st0;
+  lastTab = S.tab; syncFilters(); lawsFromS(); setState(S.state); setTab(S.tab);
+  if (CASE) { CASE = computeCase(S.state, S); buildTrack(); go(st1, false); }
 });
 /* preview banner */
 if (window.FRT_PREVIEW) { const pb = document.createElement('div'); pb.className = 'previewbar'; pb.setAttribute('role', 'status');
   pb.innerHTML = `<b>PREVIEW</b><span>Sheet edits from ${esc(new Date(D.updated || Date.now()).toLocaleString())}. Not live until someone presses Deploy.</span><a href="./">See the live site</a>`; document.body.prepend(pb); }
 /* ================= start ================= */
+const startStep = S.step, startWhatif = S.whatif;
 syncFilters();
 setState(S.state, false);
 restartCase(false);
+if (startStep || startWhatif !== 'none') { S.whatif = startWhatif; CASE = computeCase(S.state, S); buildTrack(); go(startStep, false); }
 setTab(S.tab);
 READY = true;
 })();
