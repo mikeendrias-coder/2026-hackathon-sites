@@ -241,7 +241,10 @@ function ruleStatus(state, rule, ctx, at) {
   for (const k of ['covered', 'partial', 'review', 'bypassed']) if (hits.some(h => h.kind === k)) return { status: k, hits, top: hits.find(h => h.kind === k) };
   return { status: at === 'lineup' ? 'info' : 'gap', hits };
 }
-const billsFor = (state, rule) => D.bills.filter(b => b.state === state && b.rules.includes(rule) && b.pending)
+// "Last session": bills from the newest year in the data, plus older bills still alive (two-year sessions carry them over).
+const LAST = String(Math.max(...D.bills.map(b => +b.year || 0)));
+const inSession = b => String(b.year) === LAST || b.pending;
+const billsFor = (state, rule) => D.bills.filter(b => b.state === state && b.rules.includes(rule) && inSession(b))
   .sort((a, b) => String(b.year).localeCompare(String(a.year)));
 function effective(state, rule, ctx, at) {
   if (rule === '6' && ctx.src === 'photo') return { status: 'na', hits: [], has: stateProt(state, '6').level !== 'no' };
@@ -404,9 +407,9 @@ const chipList = list => `<div class="linkrow">${list.map(s => `<button class="c
 function stateGroups(rule) {
   const full = [...new Set(D.laws.filter(l => l.rules.includes(rule) && !l.limits[rule] && !l.source && !l.db && broad(l)).map(l => l.state))].sort();
   const part = [...new Set(D.laws.filter(l => l.rules.includes(rule)).map(l => l.state))].filter(s => !full.includes(s)).sort();
-  const bills = [...new Set(D.bills.filter(b => b.rules.includes(rule) && b.pending).map(b => b.state))].filter(s => !full.includes(s)).sort();
+  const bills = [...new Set(D.bills.filter(b => b.rules.includes(rule) && inSession(b)).map(b => b.state))].filter(s => !full.includes(s)).sort();
   const sec = (ic, t, list) => list.length ? `<div class="sec"><h3 class="h3i">${img(ic, 24)}<span>${t}</span><span class="count sm">${list.length}</span></h3>${chipList(list)}</div>` : '';
-  return sec('shield-yes', 'States where it is law in full', full) + sec('shield-part', 'States where it is law in a limited form', part) + sec('bill', 'States with live bills that would add or strengthen it', bills)
+  return sec('shield-yes', 'States where it is law in full', full) + sec('shield-part', 'States where it is law in a limited form', part) + sec('bill', `States with ${LAST} bills that would add or strengthen it`, bills)
     + `<div class="linkrow"><button class="btn lime" data-cmplaws="${rule}">Compare every version of this rule</button></div>`;
 }
 function protDrawer(state, rule) {
@@ -596,7 +599,7 @@ function renderState() {
     const lim = sp.level === 'part' ? (() => { const l = sp.laws[0]; return l.limits[r] ? plainLimit(l.limits[r]) : l.source ? `only covers ${SRC_FOR[l.source]}` : l.db ? "only covers driver's license photo searches" : !broad(l) ? `only binds ${l.whoFor.map(w => WHO_FOR[w]).join(' and ')}` : ''; })() : '';
     const nb = billsFor(st, r).length;
     return `<button class="prot" data-prot="${r}">${img(PICON[r], 44)}<span><b>${esc(PROT[r].short)}${sp.review ? `<span class="flag" data-tip="${esc('Unclear: ' + (sp.reviewNote || 'our research flagged an open question about how to count this law.'))}">?</span>` : ''}</b>
-      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : bn ? `No separate rule needed. The ${esc(bn.ban.kind.toLowerCase())} goes further` : 'No state law adds this'}${nb ? ` · ${nb} live bill${nb > 1 ? 's' : ''}` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
+      <span class="st">${lim ? esc(lim.replace(/^it /, '').replace(/^./, c => c.toUpperCase())) : sp.level === 'yes' ? esc(sp.laws[0].name) : bn ? `No separate rule needed. The ${esc(bn.ban.kind.toLowerCase())} goes further` : 'No state law adds this'}${nb ? ` · ${nb} ${LAST} bill${nb > 1 ? 's' : ''}` : ''}</span></span><span class="end"><span class="tagline ${w[2]}">${w[1]}</span>${img(w[0], 36)}<span class="arrow" aria-hidden="true">→</span></span></button>`;
   }).join('') + `<button class="prot billcell" id="s-bills2">${img('bill', 44)}<span><b>Bills in ${esc(st)}</b>
       <span class="st">${billsHere.length ? `Proposed laws on face recognition. Select to read ${billsHere.length > 1 ? 'them' : 'it'}.` : 'No bills recorded in this research'}</span></span><span class="end"><span class="count${billsHere.length ? '' : ' zero'}" aria-label="${billsHere.length} bills">${billsHere.length}</span><span class="arrow" aria-hidden="true">→</span></span></button>`;
   const other = lawsHere.filter(l => !l.rules.length);
@@ -727,12 +730,12 @@ function verdictHTML() {
     <div class="whatif">
       <div class="seg2" role="group" aria-label="What if">
         <button data-w="none" aria-pressed="${S.whatif === 'none'}">Today's law</button>
-        <button data-w="bills" aria-pressed="${S.whatif === 'bills'}">Pass ${esc(st)}'s live bills</button>
+        <button data-w="bills" aria-pressed="${S.whatif === 'bills'}">Pass ${esc(st)}'s ${LAST} bills</button>
         <button data-w="borrow" aria-pressed="${S.whatif === 'borrow'}">Copy another state</button>
       </div>
       ${S.whatif === 'borrow' ? `<select class="select" id="model" aria-label="State to copy">${models.map(m => `<option${m === S.model ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>` : ''}
     </div>
-    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? (D.bills.some(b => b.state === st && b.pending) ? `Lime gates show what would change if ${esc(st)}'s live bills on this topic passed.` : `${esc(st)} has no live bills on this topic right now.`) : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
+    <p class="small muted" style="margin-top:8px">${S.whatif === 'bills' ? (!D.bills.some(b => b.state === st && inSession(b)) ? `${esc(st)} lawmakers proposed no face recognition bills in ${LAST}.` : n('would') ? `Lime gates show what would change if the bills ${esc(st)} lawmakers proposed in ${LAST} had passed.` : `${esc(st)} lawmakers proposed bills in ${LAST}, but none of them would close a gap in this case.`) : S.whatif === 'borrow' ? `Lime gates show what would change if ${esc(st)} had ${esc(S.model)}'s law.` : 'Pick an option. Lime gates on the road show what would change.'}</p>`;
 }
 let walkTimer = null;
 function go(i, animate) {
