@@ -13,7 +13,8 @@
   function labelText(sel) {
     const lab = sel.closest('label');
     if (lab) { const l = lab.querySelector('.label'); if (l) return l.textContent.trim(); }
-    return sel.getAttribute('aria-label') || '';
+    const forLab = sel.id && document.querySelector('label[for="' + sel.id + '"]');
+    return sel.getAttribute('aria-label') || (forLab ? forLab.textContent.trim() : '');
   }
 
   function enhance(sel) {
@@ -129,7 +130,13 @@
       if (hit !== undefined) setActive(hit, true);
     }
   });
-  document.addEventListener('pointerdown', e => { if (open && !pop.contains(e.target) && !open.btn.contains(e.target)) close(false); }, true);
+  document.addEventListener('pointerdown', e => {
+    if (!open || pop.contains(e.target) || open.btn.contains(e.target)) return;
+    const b = open.btn, had = pop.contains(document.activeElement);
+    close(false);
+    // Keep the keyboard place unless the click lands on something that takes focus itself.
+    if (had && !e.target.closest('button,a[href],input,select,textarea,[tabindex]')) b.focus({ preventScroll: true });
+  }, true);
   addEventListener('resize', () => close(false));
   document.addEventListener('scroll', e => { if (open && !pop.contains(e.target)) place(); }, true);
 
