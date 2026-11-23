@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Face Value (draft): what stops police from using face recognition on you?</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Follow a police face recognition search in any state and see which state laws step in, and where nothing does. A CDT staff hackathon prototype.">
+<link rel="icon" href="../icons/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#app">Skip to main content</a>
+
+<header class="bar">
+  <svg class="barnet" viewBox="0 0 900 64" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"><path d="M120 66 C300 46 470 14 900 -4"/><path d="M330 66 C470 40 640 30 900 50"/><path d="M560 -2 C610 18 690 44 770 66"/></g><g fill="#E2FE90"><circle cx="452" cy="4" r="2.4"/><circle cx="604" cy="60" r="2.4"/><circle cx="700" cy="4" r="2.4"/><circle cx="845" cy="61" r="2.4"/></g></svg>
+  <button class="brand" id="home" data-tip="Home">
+    <img class="px" src="../icons/logo.svg" alt="">
+    <span><b>Face Value</b></span>
+  </button>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-state" aria-controls="v-state" data-tab="state" aria-selected="true"><img class="px" src="../icons/shield-yes.svg" alt="">Your state</button>
+    <button class="tab" role="tab" id="tab-case" aria-controls="v-case" data-tab="case" aria-selected="false"><img class="px" src="../icons/step-search.svg" alt="">Follow a case</button>
+    <button class="tab" role="tab" id="tab-compare" aria-controls="v-compare" data-tab="compare" aria-selected="false"><img class="px" src="../icons/step-lineup.svg" alt="">Compare</button>
+    <button class="tab" role="tab" id="tab-laws" aria-controls="v-laws" data-tab="laws" aria-selected="false"><img class="px" src="../icons/step-disclose.svg" alt="">Read the laws</button>
+  </nav>
+  <div class="right">
+    <button class="pill motion" id="motion" data-tip="Pause or play all animation"><img class="px" src="../icons/who-local.svg" alt=""><span class="lt" id="motion-t">Pause motion</span></button>
+    <button class="pill" id="open-about" aria-label="About this page" data-tip="About this page, sources and terms"><span class="i-wrap"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></span><span class="lt">About this page</span></button>
+  </div>
+</header>
+<div class="subbar"><span class="sb-main">State face recognition laws</span><span class="sb-note">Draft for team review · <a href="../">Live version</a> · Not legal advice</span></div>
+
+<main class="app" id="app" tabindex="-1">
+  <!-- map column (desktop) -->
+  <aside class="mapcol" aria-label="Pick a state">
+    <div class="card mapcard">
+      <div class="hd"><span class="label dot">Pick a state on the map</span><button class="info" data-info="map" aria-label="What the map colors mean" data-tip="What the map colors mean"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+      <div class="tiles" id="tiles" role="group" aria-label="States"></div>
+      <div class="mlegend" id="mlegend"></div>
+      <label class="sr-only" for="state-pick">State</label>
+      <select class="select" id="state-pick"></select>
+    </div>
+    <button class="card storybox" id="open-stories">
+      <img class="px" src="../icons/step-photo.svg" alt="">
+      <span><b style="font:600 16px var(--head)">Start with a story</b><br><span class="small muted">Six made-up cases built on real state laws</span></span>
+      <span class="arrow" aria-hidden="true">→</span>
+    </button>
+    <div class="card legendcard" aria-label="How to read the symbols">
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center"><span class="label dot">Reading the shields</span><button class="info" data-info="gates" aria-label="More about the symbols" data-tip="More about the symbols"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+      <div><img class="px" src="../icons/shield-yes.svg" alt=""><span class="tagline t-yes">Yes</span>Protected by state law</div>
+      <div><img class="px" src="../icons/shield-part.svg" alt=""><span class="tagline t-part">Partly</span>Only sometimes, or unclear</div>
+      <div><img class="px" src="../icons/shield-no.svg" alt=""><span class="tagline t-no">No</span>Not protected</div>
+      <div class="gates"><img class="px" src="../icons/gate-closed.svg" alt=""><img class="px" src="../icons/gate-partial.svg" alt=""><img class="px" src="../icons/gate-open.svg" alt=""><span>Same colors as gates on the case road</span></div>
+    </div>
+  </aside>
+
+  <!-- HOME -->
+  <section class="view" id="v-home" aria-labelledby="w-title" tabindex="-1">
+    <div class="homehero">
+      <svg class="net" viewBox="0 0 520 300" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1"><path d="M40 300 C190 190 300 130 520 20"/><path d="M110 300 C230 160 360 120 520 130"/><path d="M230 0 C290 100 360 200 480 300"/></g><g fill="#E2FE90"><circle cx="300" cy="137" r="4"/><circle cx="372" cy="128" r="4"/><circle cx="410" cy="230" r="4"/><circle cx="210" cy="200" r="4"/><circle cx="455" cy="62" r="4"/></g></svg>
+      <div class="hh-top">
+        <div class="hh-text">
+          <h1 id="w-title">What stops police from using face recognition on you?</h1>
+          <p id="w-sub"></p>
+        </div>
+        <div class="hstats" id="hstats"></div>
+      </div>
+      <div class="wscene" aria-hidden="true">
+        <div class="cam"><img class="px" src="../icons/src-cctv.svg" alt=""></div>
+        <div class="g"><img class="px" src="../icons/gate-closed.svg" alt=""></div>
+        <div class="w"><img class="px" src="../icons/who-local.svg" alt=""></div>
+        <div class="ground"></div>
+      </div>
+    </div>
+    <div class="hchoices">
+      <button data-go="state"><img class="px" src="../icons/shield-yes.svg" alt=""><span><b>See your state</b><span>Which of 7 common protections it has</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="case"><img class="px" src="../icons/step-search.svg" alt=""><span><b>Follow a case</b><span>Walk one police search, step by step</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="compare"><img class="px" src="../icons/step-lineup.svg" alt=""><span><b>Compare two states</b><span>Same case, side by side</span></span><span class="arrow" aria-hidden="true">→</span></button>
+      <button data-go="laws"><img class="px" src="../icons/step-disclose.svg" alt=""><span><b>Read the laws</b><span>Search every law, bill and exact quote</span></span><span class="arrow" aria-hidden="true">→</span></button>
+    </div>
+  </section>
+
+  <!-- YOUR STATE -->
+  <section class="view card" id="v-state" role="tabpanel" aria-labelledby="tab-state" tabindex="-1">
+    <div class="mstate" style="padding:12px 16px 0"><select class="select" data-statepick aria-label="State"></select><button class="info" data-info="map" aria-label="About the map"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+    <div class="hero">
+      <div class="htext">
+        <div class="label dot" id="s-kicker"></div>
+        <h1 id="s-name"></h1>
+        <p class="sum" id="s-sum"></p>
+      </div>
+      <div class="hud" id="s-hud"></div>
+    </div>
+    <div class="scroll" style="flex:1;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--rule)">
+        <h2 class="sechead" id="s-sechead">What stands between people here and a face scan</h2>
+        <button class="info" data-info="protections" aria-label="About the seven protections" data-tip="What the 7 protections are"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
+        <span class="small muted tapnote" style="margin-left:auto">Select one to read the law</span>
+      </div>
+      <div class="prots" id="s-prots"></div>
+      <div class="sfoot" id="s-foot"></div>
+    </div>
+  </section>
+
+  <!-- FOLLOW A CASE -->
+  <section class="view" id="v-case" role="tabpanel" aria-labelledby="tab-case" tabindex="-1" style="gap:12px">
+    <h1 class="sr-only">Follow a case</h1>
+    <div class="fbar" id="fbar">
+      <label class="seg seg-state"><span class="label">State</span><select id="f-state" data-statepick></select></label>
+      <label class="seg"><span class="label">Who is searching</span><select id="f-who"></select></label>
+      <label class="seg"><span class="label">Photo from</span><select id="f-src"></select></label>
+      <label class="seg"><span class="label">Searched against</span><select id="f-db"></select></label>
+      <label class="seg"><span class="label">What crime</span><select id="f-crime"></select></label>
+      <button class="btn ghost fstories" data-open="stories"><img class="px" src="../icons/step-photo.svg" alt="" width="22" height="22">Stories</button>
+    </div>
+    <div class="casegrid">
+    <div class="card trackcard">
+      <div class="sky" aria-hidden="true"><img class="px" src="../icons/cloud.svg" alt="" style="top:96px;animation-duration:38s;animation-delay:-6s"><img class="px" src="../icons/cloud.svg" alt="" style="top:118px;width:44px;height:44px;opacity:.7;animation-duration:55s;animation-delay:-30s"><img class="px" src="../icons/cloud.svg" alt="" style="top:84px;width:52px;height:52px;animation-duration:46s;animation-delay:-20s"></div>
+      <div class="casehead"><p class="question" id="question"></p><button class="info" data-info="gates" aria-label="How to read the gates" data-tip="How to read the gates and colors"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button></div>
+      <p class="howline" id="howline"></p>
+      <div class="track" id="track"></div>
+      <div class="trackfoot">
+        <div class="gatekey"><span class="label">On the road</span><span><img class="px" src="../icons/gate-closed.svg" alt="">Protected</span><span><img class="px" src="../icons/gate-partial.svg" alt="">Partly</span><span><img class="px" src="../icons/gate-open.svg" alt="">Not protected</span></div>
+        <div class="storyrow"><span class="label">Try a story</span><div class="schips" id="schips"></div></div>
+      </div>
+    </div>
+    <div class="card stepcard">
+      <div class="stephead" id="stephead"></div>
+      <div class="stepbody scroll" id="stepbody"></div>
+      <div class="stepnav">
+        <button class="btn ghost" id="back"><span aria-hidden="true">←</span> Back</button>
+        <button class="btn lime" id="next">Next step <span aria-hidden="true">→</span></button>
+        <button class="btn ghost" id="restart" aria-label="Start over" data-tip="Start the case over">↻</button>
+        <span class="hint">← → keys work too</span>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="view card" id="v-compare" role="tabpanel" aria-labelledby="tab-compare" tabindex="-1">
+    <h1 class="sr-only">Compare</h1>
+    <div class="cmpwrap scroll">
+      <div class="seg2 cmpmode" id="cmp-mode" role="group" aria-label="What to compare"><button data-m="states"><img class="px" src="../icons/step-lineup.svg" alt="" width="22" height="22">States</button><button data-m="laws"><img class="px" src="../icons/law.svg" alt="" width="22" height="22">Laws &amp; bills</button></div>
+      <div class="ctxchip" id="cmp-ctx"></div>
+      <div id="cmp-grid"></div>
+    </div>
+  </section>
+
+  <!-- READ THE LAWS -->
+  <section class="view card" id="v-laws" role="tabpanel" aria-labelledby="tab-laws" tabindex="-1">
+    <h1 class="sr-only">Read the laws</h1>
+    <div class="lawswrap">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="ltabs" role="tablist" id="ltabs"></div>
+        <button class="info" data-info="laws" aria-label="About this data" data-tip="Where this data comes from"><svg class="i-ico" viewBox="0 0 8 8" aria-hidden="true" focusable="false"><rect x="3" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="3" width="3" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="3" fill="currentColor"/><rect x="2" y="7" width="4" height="1" fill="currentColor"/></svg></button>
+      </div>
+      <div class="lfilters">
+        <label><span class="label">Search the text</span><input class="search" id="l-q" type="search" placeholder="Like warrant, drone or lineup" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+        <label><span class="label">State</span><select class="select" id="l-state"></select></label>
+        <label><span class="label">Protection</span><select class="select" id="l-prot"></select></label>
+        <label><span class="label">Status</span><select class="select" id="l-status"></select></label>
+      </div>
+      <div class="lcount"><span class="label" id="l-count" role="status"></span><button class="copy" id="l-clear">Clear filters</button></div>
+      <div class="ltable scroll" id="ltable" role="tabpanel" aria-label="Results"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="bnav" role="tablist" aria-label="Sections">
+  <button role="tab" aria-controls="v-state" data-tab="state" aria-selected="true"><img class="px" src="../icons/shield-yes.svg" alt="">State</button>
+  <button role="tab" aria-controls="v-case" data-tab="case" aria-selected="false"><img class="px" src="../icons/step-search.svg" alt="">Case</button>
+  <button role="tab" aria-controls="v-compare" data-tab="compare" aria-selected="false"><img class="px" src="../icons/step-lineup.svg" alt="">Compare</button>
+  <button role="tab" aria-controls="v-laws" data-tab="laws" aria-selected="false"><img class="px" src="../icons/step-disclose.svg" alt="">Laws</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" inert role="dialog" aria-modal="true" aria-labelledby="d-title">
+  <div class="dhead"><div class="tt"><div class="label dot" id="d-kicker"></div><h2 id="d-title"></h2></div><button class="x" id="d-close" aria-label="Close">×</button></div>
+  <div class="dbody scroll" id="d-body" style="flex:1"></div>
+</aside>
+
+<script>
+/* Load the data file the Google Sheet publishes, then start the app.
+   Add ?preview to the address to see the sheet's latest preview instead of the live site. */
+(() => {
+  const pv = new URLSearchParams(location.search).has('preview');
+  const add = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.body.appendChild(s); });
+  const get = f => fetch(f + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.json(); });
+  (pv ? get('../data/preview.json').catch(() => get('../data/live.json')) : get('../data/live.json'))
+    .then(d => { window.FRT_DATA = d; window.FRT_PREVIEW = pv; })
+    .then(() => add('app.js')).then(() => add('dropdown.js'))
+    .catch(e => { const m = document.createElement('p'); m.className = 'loadfail'; m.textContent = 'The law data could not load. Refresh to try again.'; document.body.prepend(m); console.error(e); });
+})();
+</script>
+<div class="sr-only" role="status" id="sr-live"></div>
+</body>
+</html>
