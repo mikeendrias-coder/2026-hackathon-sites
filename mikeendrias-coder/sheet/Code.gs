@@ -129,6 +129,8 @@ var WORD_KEYS = [
 {"key":"law.cite","where":"Law card: label before the citation","max":20,"fills":[],"usedOn":"New page","text":"Citation"},
 {"key":"law.notCounted","where":"Zero-law and other-law cards: label before why it adds none of the 7","max":40,"fills":[],"usedOn":"New page","text":"Why it doesn’t count:"},
 {"key":"a11y.newTab","where":"Screen-reader note on links that open a new tab","max":40,"fills":[],"usedOn":"New page","text":"(opens in a new tab)"},
+{"key":"quote.also","where":"Quote badge before words the law also allows (marked ((…)) in the Sheet)","max":20,"fills":[],"usedOn":"New page","text":"Also allowed"},
+{"key":"quote.exc","where":"Quote badge before an exception in the law (marked [[…]] in the Sheet)","max":20,"fills":[],"usedOn":"New page","text":"Exception"},
 {"key":"catch.src.drone","where":"The catch: a law that only covers drones","max":80,"fills":[],"usedOn":"New page","text":"it only covers police drones"},
 {"key":"catch.src.bodycam","where":"The catch: a law that only covers body cameras","max":80,"fills":[],"usedOn":"New page","text":"it only covers body-camera footage"},
 {"key":"catch.src.camera","where":"The catch: a law that only covers security cameras","max":80,"fills":[],"usedOn":"New page","text":"it only covers security-camera footage"},

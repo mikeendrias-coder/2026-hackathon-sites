@@ -60,27 +60,38 @@
     <p class="lede" data-w="intro.lede">It depends on your state. Pick yours to see which of 7 key protections its laws give you.</p>
   </div>
   <aside class="box soft" id="risk" aria-labelledby="risk-h">
-    <h2 id="risk-h" data-w="risk.heading">Why it's risky</h2>
-    <div class="risk-body"></div>
-    <a class="lnk" id="risk-more" href="https://example.com/face-value-read-more" target="_blank" rel="noopener" data-w="risk.linkText">Read more</a>
+    <div class="risk-scene" aria-hidden="true">
+      <img class="px rs-cam" src="icons/src-cctv.svg" width="48" height="48" alt="">
+      <span class="rs-beam"></span>
+      <span class="rs-scan"></span>
+      <img class="px rs-who" src="icons/who-local.svg" width="56" height="56" alt="">
+      <span class="rs-ground"></span>
+    </div>
+    <div class="risk-text">
+      <h2 id="risk-h" data-w="risk.heading">Why it’s risky</h2>
+      <ul class="risk-lines"><li>Face recognition can point to the wrong person.</li><li>People have been arrested because of a bad match.</li></ul>
+      <a class="lnk" id="risk-more" href="https://example.com/face-value-read-more" target="_blank" rel="noopener" data-w="risk.linkText">Read more</a>
+    </div>
   </aside>
 </section>
 
-<section id="offline" class="box wrap" hidden aria-labelledby="offline-h">
+<section id="offline" class="box wrap-box" hidden aria-labelledby="offline-h">
   <h2 id="offline-h"></h2>
   <p></p>
 </section>
 
-<section id="load-fail" class="box wrap" hidden role="alert">
-  <p data-w="load.message">The law data didn't load. Check your connection and try again.</p>
+<section id="load-fail" class="box wrap-box" hidden role="alert">
+  <p data-w="load.message">The law data didn’t load. Check your connection and try again.</p>
   <button class="btn primary" id="retry" type="button" data-w="load.retry">Try again</button>
 </section>
 
 <main id="board" class="board" tabindex="-1">
   <section id="map" aria-labelledby="map-h">
     <h2 id="map-h" data-w="map.heading">Pick your state</h2>
-    <div class="map-pick"></div>
-    <div id="tiles"><p class="loading" data-w="map.loading">Loading the map…</p></div>
+    <div class="map-pick">
+      <button class="dd" id="state-dd" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="dd-txt"><span class="dd-k" data-w="map.ddLabel">State</span><span class="dd-val" data-w="map.ddPlaceholder">Choose a state</span></span><svg class="chev" viewBox="0 0 8 8" width="12" height="12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M1 2h2v1h1v1h1V3h1V2h1v2H6v1H5v1H3V5H2V4H1z" fill="currentColor"/></svg></button>
+    </div>
+    <div id="tiles" role="group" aria-labelledby="map-h"><p class="loading" data-w="map.loading">Loading the map…</p></div>
     <ul id="legend"></ul>
   </section>
   <section id="panel" aria-labelledby="pn-title">
@@ -101,6 +112,6 @@
 
 <div id="tip" role="tooltip" hidden></div>
 <div id="sr-live" class="sr-only" aria-live="polite"></div>
-<noscript><p class="box wrap">This page needs JavaScript for the map and scorecards. <a class="lnk" href="../">Go to the live site</a></p></noscript>
+<noscript><p class="box wrap-box">This page needs JavaScript for the map and scorecards. <a class="lnk" href="../">Open the live site</a></p></noscript>
 </body>
 </html>

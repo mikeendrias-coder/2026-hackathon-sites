@@ -1,1 +1,132 @@
-/* Face Value draft: case.css (built in Phase 2) */
+/* Face Value draft: case.css. Case walkthrough (#pn-case) and example cards (#examples). Owner: B3.
+   Only cs-* and ex-* classes. Shared parts (.chip .tag .lnk .box .sr-only .px) come from styles.css.
+   Mobile first. Radius 0, no gradients, no translucency, no motion. */
+
+/* ---------- lesson callout (after an example) ---------- */
+.cs-lesson-slot { margin-top: 20px; }
+.cs-lesson {
+  margin: 0 5px 20px 0; padding: 12px 14px;
+  background: var(--light, #DCE6F7); border: 3px solid var(--blue, #1F5BB8); box-shadow: 5px 5px 0 var(--blue, #1F5BB8);
+}
+.cs-lesson p { margin: 0; }
+.cs-lesson-l { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--navy, #0C2340); }
+.cs-lesson .cs-lesson-t { margin-top: 4px; font-size: 17px; font-weight: 700; line-height: 1.35; color: var(--navy, #0C2340); }
+.cs-lesson .cs-lesson-s { margin-top: 6px; font-size: 15px; line-height: 1.5; }
+.cs-lesson .cs-lesson-o { margin-top: 6px; font-size: 15px; font-weight: 700; line-height: 1.5; }
+
+/* ---------- controls: four labelled groups, chips in one fixed 2-column grid ---------- */
+.cs-controls { display: grid; gap: 14px; margin: 0 0 20px; }
+.cs-ctl { min-width: 0; }
+.cs-ctl-l {
+  display: block; margin: 0 0 6px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted, #4D5F7A);
+}
+.cs-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; padding: 0 3px 3px 0; }
+.cs-chips .chip {
+  display: flex; align-items: center; gap: 8px; box-sizing: border-box;
+  width: 100%; min-width: 0; min-height: 44px; margin: 0;
+  justify-content: flex-start; text-align: left; line-height: 1.25;
+}
+.cs-chips .chip.cs-chip-ico { padding-top: 4px; padding-bottom: 4px; padding-left: 4px; }
+.cs-chips .chip img { width: 32px; height: 32px; flex: none; }
+.cs-chip-t { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- question and note ---------- */
+.cs-question { margin: 0 0 16px; font-size: 17px; font-weight: 700; line-height: 1.45; color: var(--navy, #0C2340); }
+.cs-note { margin: 0 5px 20px 0; padding: 10px 12px; font-size: 15px; line-height: 1.5; background: #fff; border: 3px solid var(--mid, #9DB5E0); box-shadow: 5px 5px 0 var(--mid, #9DB5E0); }
+.cs-note.cs-note-unclear { background: var(--warn-bg, #FFF3D9); color: var(--warn-ink, #8A5A00); border-color: var(--warn, #B77900); box-shadow: 5px 5px 0 var(--warn, #B77900); }
+
+/* ---------- timeline ---------- */
+.cs-steps { list-style: none; margin: 0; padding: 0; }
+.cs-step {
+  position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px;
+  padding: 0 0 24px; margin: 0;
+}
+/* the 3px navy line from this node down to the next one; dashed from the stop on */
+.cs-step::before { content: ""; position: absolute; left: 18px; top: 40px; bottom: 0; border-left: 3px solid var(--navy, #0C2340); }
+.cs-step.cs-dash::before { border-left-style: dashed; }
+.cs-step.cs-trial { padding-bottom: 0; }
+.cs-step.cs-trial::before { content: none; }
+.cs-node {
+  position: relative; z-index: 1; box-sizing: border-box; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 3px solid var(--navy, #0C2340);
+}
+.cs-node img { width: 32px; height: 32px; display: block; }
+.cs-step.is-stop .cs-node { box-shadow: 3px 3px 0 var(--navy, #0C2340); }
+.cs-step.is-skip .cs-node { border-color: var(--mid, #9DB5E0); }
+
+.cs-sb { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: start; }
+.cs-sb > * { grid-column: 1 / -1; }
+.cs-num {
+  grid-column: 1; grid-row: 1; align-self: center; min-height: 24px; display: flex; align-items: center;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue, #1F5BB8);
+}
+.cs-sb > .cs-stag { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+.cs-title { margin: 4px 0 4px; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
+.cs-step.is-skip .cs-num, .cs-step.is-skip .cs-title { color: var(--muted, #4D5F7A); }
+.cs-head { margin: 0; font-size: 15.5px; line-height: 1.5; }
+.cs-step.is-skip .cs-head { color: var(--muted, #4D5F7A); }
+.cs-detail { margin: 6px 0 0; font-size: 14.5px; line-height: 1.5; }
+
+.cs-lines { list-style: none; margin: 8px 0 0; padding: 0; border-top: 2px solid var(--light, #DCE6F7); }
+.cs-line {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
+  margin: 0; padding: 8px 0; border-bottom: 2px solid var(--light, #DCE6F7);
+}
+.cs-line-l { min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.cs-line > .tag { justify-self: end; }
+.cs-line-t { grid-column: 1 / -1; margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; }
+.cs-k-other .cs-line-l { font-weight: 600; }
+
+.cs-sb > .cs-law { justify-self: start; margin-top: 10px; }
+
+/* ---------- result ---------- */
+.cs-result { margin-top: 6px; }
+.cs-stamp {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 4px 12px 0; padding: 6px 12px 6px 8px;
+  background: #fff; border: 3px solid var(--navy, #0C2340);
+  font-size: 15px; font-weight: 800; line-height: 1.25; letter-spacing: .05em; text-transform: uppercase; color: var(--navy, #0C2340);
+}
+.cs-stamp.is-stop { box-shadow: 4px 4px 0 var(--navy, #0C2340); }
+.cs-stamp.is-through { border-style: dashed; }
+.cs-stamp img { width: 24px; height: 24px; flex: none; }
+.cs-rs { margin: 0; font-size: 15.5px; line-height: 1.5; }
+.cs-tally { margin: 12px 0 0; }
+.cs-tally-ban { padding: 8px 12px; border: 2px solid var(--navy, #0C2340); background: #fff; font-size: 15px; font-weight: 700; }
+.cs-tally-n { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cs-tn {
+  min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px;
+  background: #fff; color: var(--navy, #0C2340); border: 2px solid var(--navy, #0C2340);
+}
+.cs-tn b { font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cs-tn span { font-size: 13px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.cs-tn.cs-tn-got { background: var(--blue, #1F5BB8); color: #fff; border-color: var(--navy, #0C2340); }
+.cs-tn.cs-tn-soft { background: var(--light, #DCE6F7); border-color: var(--blue, #1F5BB8); }
+.cs-tn.cs-tn-no { border-style: dashed; }
+.cs-of { margin: 6px 0 0; font-size: 14px; color: var(--muted, #4D5F7A); }
+
+/* ---------- example cards ---------- */
+.ex-list { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 12px; padding: 0 4px 4px 0; }
+@media (min-width: 600px) { .ex-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ex-card {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-content: start;
+  box-sizing: border-box; width: 100%; min-height: 44px; margin: 0; padding: 12px;
+  font: inherit; text-align: left; color: var(--navy, #0C2340); cursor: pointer; border-radius: 0;
+  background: #fff; border: 3px solid var(--mid, #9DB5E0); box-shadow: 4px 4px 0 var(--mid, #9DB5E0);
+  -webkit-tap-highlight-color: transparent; appearance: none;
+}
+.ex-card .ex-ico { grid-row: 1 / span 2; width: 32px; height: 32px; }
+.ex-t { min-width: 0; font-size: 15.5px; font-weight: 700; line-height: 1.3; }
+.ex-l { min-width: 0; font-size: 14px; line-height: 1.45; color: var(--muted, #4D5F7A); }
+@media (hover: hover) {
+  .ex-card:hover { border-color: var(--blue, #1F5BB8); box-shadow: 4px 4px 0 var(--blue, #1F5BB8); }
+}
+.ex-card:active { transform: translate(4px, 4px); box-shadow: none; }
+.ex-card[aria-current="true"] { background: var(--light, #DCE6F7); border-color: var(--navy, #0C2340); box-shadow: 4px 4px 0 var(--navy, #0C2340); }
+.ex-card[aria-current="true"] .ex-l { color: var(--navy, #0C2340); }
+.ex-card:focus { outline: none; }
+.ex-card:focus-visible { outline: 3px solid var(--blue, #1F5BB8); outline-offset: 3px; }
+
+/* long words in Sheet text (worst-case data) wrap inside their box */
+.cs-lesson, .cs-question, .cs-note, .cs-sb, .cs-rs, .ex-t, .ex-l { overflow-wrap: anywhere; }

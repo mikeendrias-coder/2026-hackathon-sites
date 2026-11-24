@@ -1,1 +1,157 @@
-/* Face Value draft: score.css (built in Phase 2) */
+/* Face Value draft: score.css. Overview (#pn-overview), panel head (#pn-head) and scorecard (#pn-score). Owner: B2.
+   Only ov-*, pn-* and sc-* classes. Shared parts (.box .btn .lnk .tag .chip .acc .acc-b .acc-p .sr-only .px) come from styles.css.
+   Mobile first. Radius 0, no translucency, no motion; the only gradient is the ban hatch. */
+
+/* ---------- shared panel bits ---------- */
+.pn-kicker {
+  margin: 0 0 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--blue, #1F5BB8);
+}
+.pn-h2 { margin: 0; font-size: clamp(24px, 5vw, 30px); line-height: 1.15; font-weight: 800; color: var(--navy, #0C2340); }
+.sc-label {
+  margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--navy, #0C2340);
+}
+.pn-states { margin: 12px 0 0; }
+.pn-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; padding: 0 3px 3px 0; }
+.pn-chips li { display: flex; }
+
+/* ---------- overview ---------- */
+.ov-intro { margin: 8px 0 0; font-size: 16px; line-height: 1.55; color: var(--muted, #4D5F7A); }
+.ov-rows { margin: 16px 0 0; border-top: 2px solid var(--light, #DCE6F7); }
+.ov-row { border-bottom: 2px solid var(--light, #DCE6F7); }
+.ov-row > .acc-h, .sc-rows .acc > .acc-h { margin: 0; font-size: inherit; font-weight: inherit; }
+.ov-hd { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; text-align: left; }
+.ov-hd .px { width: 32px; height: 32px; flex: none; }
+.ov-name { flex: 1 1 auto; min-width: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
+.ov-count { flex: none; font-size: 14px; font-weight: 700; color: var(--muted, #4D5F7A); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ov-body { padding: 0 0 16px 44px; }
+.ov-why { margin: 0; font-size: 15px; line-height: 1.5; }
+.ov-none { margin: 10px 0 0; font-size: 15px; color: var(--muted, #4D5F7A); }
+
+/* ---------- panel head ---------- */
+.pn-titlerow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.pn-titlerow .pn-h2 { flex: 1 1 12ch; min-width: 0; overflow-wrap: anywhere; }
+.pn-change { flex: none; margin-right: 4px; }
+.pn-sum { margin: 10px 0 0; font-size: 16px; line-height: 1.55; }
+.pn-meter { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 12px 0 0; }
+.pn-shields { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+.pn-shield { display: block; width: 24px; height: 24px; }
+.pn-shield .px { display: block; width: 24px; height: 24px; }
+.pn-mcap { margin: 0; font-size: 14px; font-weight: 700; color: var(--navy, #0C2340); font-variant-numeric: tabular-nums; }
+.pn-views {
+  display: grid; grid-template-columns: 1fr 1fr; margin: 16px 5px 0 0;
+  border: 3px solid var(--navy, #0C2340); box-shadow: 4px 4px 0 var(--navy, #0C2340); background: #fff;
+}
+.pn-view {
+  min-height: 44px; margin: 0; padding: 8px 10px; border: 0; background: #fff; color: var(--navy, #0C2340);
+  font-size: 15px; font-weight: 700; line-height: 1.25; text-align: center; cursor: pointer;
+}
+.pn-view + .pn-view { border-left: 3px solid var(--navy, #0C2340); }
+.pn-view:hover { background: var(--light, #DCE6F7); }
+.pn-view[aria-pressed="true"] { background: var(--navy, #0C2340); color: #fff; cursor: default; }
+.pn-view:focus-visible { outline: 3px solid var(--blue, #1F5BB8); outline-offset: -6px; box-shadow: inset 0 0 0 6px #fff; }
+.pn-view[aria-pressed="true"]:focus-visible { outline-color: #fff; box-shadow: none; }
+
+/* ---------- scorecard ---------- */
+#pn-score:not([hidden]) { display: flex; flex-direction: column; flex: 1 1 auto; }
+.sc { display: flex; flex-direction: column; flex: 1 1 auto; margin-top: 20px; }
+.sc > .box { margin: 0 5px 20px 0; padding: 16px; }
+.sc-card-h { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
+.sc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+
+/* ban card: the hatch strip ties it to the ban tiles on the map */
+.sc-ban { position: relative; }
+.sc-ban::before {
+  content: ""; display: block; height: 8px; margin: -16px -16px 14px;
+  background: repeating-linear-gradient(45deg, var(--navy, #0C2340) 0 4px, var(--blue, #1F5BB8) 4px 8px);
+  border-bottom: 3px solid var(--navy, #0C2340);
+}
+.sc-ban-top, .sc-zero-top { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.sc-ban-top .px { width: 48px; height: 48px; }
+.sc-zero-top .px { width: 32px; height: 32px; }
+.sc-ban-tt { display: grid; gap: 6px; }
+.sc-ban-text { margin: 12px 0 0; font-size: 16px; font-weight: 700; line-height: 1.45; }
+.sc-ban-covers, .sc-ban-except { margin: 6px 0 0; font-size: 15px; line-height: 1.5; }
+.sc-ban-law { margin: 14px 0 0; padding: 12px 0 0; border-top: 2px solid var(--light, #DCE6F7); }
+.sc-exc { margin: 14px 0 0; padding: 12px 0 0; border-top: 2px solid var(--light, #DCE6F7); }
+.sc-exc-h { margin-bottom: 8px; }
+.sc-zero .sc-law { margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--light, #DCE6F7); }
+
+/* protection rows: icon column, name, tags under the name, chevron at the end */
+.sc-rows { margin-bottom: 24px; border-top: 2px solid var(--light, #DCE6F7); }
+.sc-rows > .acc, .sc-bills-none { border-bottom: 2px solid var(--light, #DCE6F7); }
+.sc-hd {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; row-gap: 4px;
+  align-items: center; flex: 1 1 auto; min-width: 0; text-align: left;
+}
+.sc-hd > .px { grid-row: span 2; width: 32px; height: 32px; align-self: center; }
+.sc-name { grid-column: 2; min-width: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
+.sc-hd > .sc-tags { grid-column: 2; }
+.sc-other .sc-hd > .px, .sc-bills .sc-hd > .px, .sc-bills-none .sc-hd > .px { grid-row: auto; }
+.sc-sum { padding: 0 0 14px 44px; cursor: pointer; }
+.sc-why { margin: 0; font-size: 15px; line-height: 1.5; }
+.sc-catch { margin: 8px 0 0; padding: 2px 0 2px 10px; border-left: 3px solid var(--blue, #1F5BB8); font-size: 15px; font-weight: 600; line-height: 1.5; }
+.sc-bnote { margin: 8px 0 0; padding: 2px 0 2px 10px; border-left: 3px dashed var(--mid, #9DB5E0); font-size: 14px; line-height: 1.5; color: var(--muted, #4D5F7A); }
+.sc-body { padding: 0 0 18px 44px; }
+.sc-no { margin: 0; font-size: 15px; line-height: 1.5; }
+.sc-nat { margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted, #4D5F7A); }
+.sc-intro { margin: 0 0 4px; font-size: 15px; line-height: 1.5; color: var(--muted, #4D5F7A); }
+.sc-bills-none { padding: 12px 0; }
+.sc-bills-none .sc-name { margin: 0; font-size: 15px; font-weight: 600; }
+
+/* law cards */
+.sc-law + .sc-law { margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--light, #DCE6F7); }
+.sc-intro + .sc-law { margin-top: 10px; }
+.sc-law-name { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--navy, #0C2340); }
+.sc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 4px 0 0; font-size: 14px; line-height: 1.4; color: var(--muted, #4D5F7A); }
+.sc-does, .sc-whynot, .sc-noq, .sc-note { margin: 8px 0 0; font-size: 15px; line-height: 1.5; }
+.sc-noq, .sc-note { color: var(--muted, #4D5F7A); }
+.sc-law .sc-catch { font-weight: 400; }
+.sc-unclear {
+  margin: 10px 3px 0 0; padding: 8px 10px; font-size: 14px; line-height: 1.5;
+  background: var(--warn-bg, #FFF3D9); border: 2px solid var(--warn, #B77900); color: var(--navy, #0C2340);
+}
+.sc-cite { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--muted, #4D5F7A); overflow-wrap: anywhere; }
+.sc-cite .sc-label { margin-right: 4px; font-size: 12.5px; }
+.sc-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+
+/* quotes: light fill, blue rule on the left */
+.sc-q { margin: 10px 0 0; padding: 10px 12px; background: var(--light, #DCE6F7); border-left: 4px solid var(--blue, #1F5BB8); font-size: 15px; line-height: 1.55; }
+.sc-q p { margin: 0; overflow-wrap: anywhere; }
+.sc-q .kw { font-weight: 800; }
+.sc-q .q-also, .sc-q .q-exc { background: var(--warn-bg, #FFF3D9); box-shadow: 0 2px 0 var(--warn, #B77900); }
+.sc-q .sc-qcite { margin-top: 6px; font-size: 14px; color: var(--muted, #4D5F7A); }
+.sc-xb {
+  display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 0 0; padding: 0 5px 0 2px;
+  border: 2px solid var(--warn, #B77900); background: #fff; color: var(--warn-ink, #8A5A00);
+  font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; line-height: 20px; vertical-align: 1px;
+}
+.sc-xb .px { width: 16px; height: 16px; }
+
+/* bills */
+.sc-bill + .sc-bill { margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--light, #DCE6F7); }
+.sc-bill-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.sc-bill-h { margin: 0; flex: 1 1 14ch; min-width: 0; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--navy, #0C2340); }
+.sc-bill .t-alive { background: var(--blue, #1F5BB8); color: #fff; border-color: var(--navy, #0C2340); }
+.sc-bill .t-over { background: #fff; color: var(--muted, #4D5F7A); border-color: var(--mid, #9DB5E0); border-style: dotted; }
+.sc-imps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; }
+.sc-imp {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 8px;
+  border: 2px solid var(--blue, #1F5BB8); background: #fff; font-size: 14px; line-height: 1.3; color: var(--navy, #0C2340);
+}
+.sc-imp b { font-weight: 700; }
+.sc-imp b + .sr-only + span { padding-left: 6px; border-left: 2px solid var(--light, #DCE6F7); }
+.sc-sym { flex: none; min-width: 12px; font-weight: 800; text-align: center; }
+.sc-imp.k-loose { border-color: var(--warn, #B77900); background: var(--warn-bg, #FFF3D9); }
+.sc-imp.k-same, .sc-imp.k-have, .sc-imp.k-none { border-color: var(--mid, #9DB5E0); border-style: dashed; }
+
+/* "Pick another state" bar: it takes up any spare height above it, so the panel ends flush */
+.pn-again { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 4px); margin: auto 4px 4px 0; }
+.pn-again .arrow { flex: none; }
+
+/* phones: no indent under the icon, so text gets the full width */
+@media (max-width: 399px) {
+  .ov-body, .sc-sum, .sc-body { padding-left: 0; }
+  .sc > .box { padding: 14px; }
+  .sc-ban::before { margin: -14px -14px 12px; }
+}

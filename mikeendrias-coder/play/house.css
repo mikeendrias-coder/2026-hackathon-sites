@@ -1,1 +1,60 @@
-/* Face Value draft: house.css (built in Phase 2) */
+/* Face Value draft: house base. Port of jobjd house.css lines 1-59, recolored to the Nov 11 blue palette.
+   Every browser default is replaced with ours. Loaded first, so styles.css and the module CSS still win. */
+:root{--bg:#FFFFFF;--fg:#0C2340;--mut:#4D5F7A;--line:#0C2340;--t3:#9DB5E0;--soft:#DCE6F7}
+html,body{margin:0}
+html{background:var(--bg,#FFFFFF)}
+/* Moving between pages cross-fades instead of flashing white, where the browser supports it. */
+@view-transition{navigation:auto}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
+@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}
+:root{color-scheme:light;-webkit-text-size-adjust:100%;caret-color:var(--fg,#0C2340)}
+*{-webkit-tap-highlight-color:transparent}
+/* Focus: never the browser default ring. A click shows nothing; the keyboard gets our ring (styles.css sets the 3px blue one). */
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--fg,#0C2340);outline-offset:2px}
+svg :focus-visible,svg:focus-visible{outline:none}
+/* Text selection: navy with white text. */
+::selection{background:var(--fg,#0C2340);color:var(--bg,#FFFFFF)}
+/* Links carry no browser color or underline; the page styles them as boxed controls. */
+a{color:inherit;text-decoration:none}
+/* Form controls: no native chrome. */
+button,input,select,textarea{font:inherit;color:inherit;-webkit-appearance:none;appearance:none;border-radius:0}
+button{background:none}
+input::placeholder,textarea::placeholder{color:var(--mut,#4D5F7A);opacity:1}
+input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-search-decoration,input[type=search]::-webkit-search-results-button,input[type=search]::-webkit-search-results-decoration{-webkit-appearance:none;display:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 40px var(--bg,#FFFFFF) inset;-webkit-text-fill-color:var(--fg,#0C2340);transition:background-color 9999s}
+/* Checkbox and radio: square, navy, boxed. */
+input[type=checkbox],input[type=radio]{width:16px;height:16px;margin:0;flex:none;border:1.5px solid var(--fg,#0C2340);background:var(--bg,#FFFFFF);display:inline-grid;place-content:center;cursor:pointer;vertical-align:-3px}
+input[type=checkbox]::before{content:"";width:9px;height:9px;background:var(--fg,#0C2340);transform:scale(0);transition:transform .12s ease}
+input[type=radio]::before{content:"";width:8px;height:8px;background:var(--fg,#0C2340);transform:scale(0);transition:transform .12s ease}
+input[type=checkbox]:checked::before,input[type=radio]:checked::before{transform:scale(1)}
+input[type=checkbox]:indeterminate::before{transform:scale(1);height:2px}
+/* Range: a thin square track and a square thumb. */
+input[type=range]{height:22px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--t3,#9DB5E0)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;background:var(--fg,#0C2340);border:2px solid var(--bg,#FFFFFF);box-shadow:0 0 0 1px var(--fg,#0C2340)}
+input[type=range]::-moz-range-track{height:4px;background:var(--t3,#9DB5E0)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:0;background:var(--fg,#0C2340);border:2px solid var(--bg,#FFFFFF)}
+/* Select: our caret, never the system arrow. (House rule: prefer our own menus; this only catches a stray one.) */
+select{padding-right:26px;background:var(--bg,#FFFFFF) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%230C2340'/%3E%3C/svg%3E") no-repeat right 9px center;border:1px solid var(--line,#0C2340)}
+/* Scrollbars: thin, soft blue, square ends. */
+*{scrollbar-width:thin;scrollbar-color:#9DB5E0 transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#9DB5E0;border:2px solid var(--bg,#FFFFFF)}
+::-webkit-scrollbar-thumb:hover{background:#1F5BB8}
+::-webkit-scrollbar-corner{background:transparent}
+/* Details, marks, abbreviations, rules: no browser triangles, yellow or dotted lines. */
+summary{list-style:none;cursor:pointer}summary::-webkit-details-marker{display:none}
+mark{background:var(--fg,#0C2340);color:var(--bg,#FFFFFF);padding:0 2px}
+abbr[title]{text-decoration:none}
+hr{border:0;height:1px;background:var(--soft,#DCE6F7);margin:0}
+img{-webkit-user-drag:none}
+[hidden]{display:none!important}
+dialog{border:1px solid var(--fg,#0C2340);border-radius:0;padding:0;background:var(--bg,#FFFFFF);color:var(--fg,#0C2340)}
+dialog::backdrop{background:var(--soft,#DCE6F7)}
+
+/* No end-of-page bounce. */
+html{overscroll-behavior:none}

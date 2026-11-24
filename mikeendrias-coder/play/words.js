@@ -138,6 +138,8 @@
     ['law.cite', 'Law card: label before the citation', 20, 'Citation'],
     ['law.notCounted', 'Zero-law and other-law cards: label before why it adds none of the 7', 40, 'Why it doesn’t count:'],
     ['a11y.newTab', 'Screen-reader note on links that open a new tab', 40, '(opens in a new tab)'],
+    ['quote.also', 'Quote badge before words the law also allows (marked ((…)) in the Sheet)', 20, 'Also allowed'],
+    ['quote.exc', 'Quote badge before an exception in the law (marked [[…]] in the Sheet)', 20, 'Exception'],
 
     /* ---------- the catch: phrases joined into "The catch: …" ---------- */
     ['catch.src.drone', 'The catch: a law that only covers drones', 80, 'it only covers police drones'],
