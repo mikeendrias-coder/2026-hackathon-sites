@@ -89,12 +89,13 @@
   <section id="map" aria-labelledby="map-h">
     <h2 id="map-h" data-w="map.heading">Pick your state</h2>
     <div class="map-pick">
-      <button class="dd" id="state-dd" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="dd-txt"><span class="dd-k" data-w="map.ddLabel">State</span><span class="dd-val" data-w="map.ddPlaceholder">Choose a state</span></span><svg class="chev" viewBox="0 0 8 8" width="12" height="12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M1 2h2v1h1v1h1V3h1V2h1v2H6v1H5v1H3V5H2V4H1z" fill="currentColor"/></svg></button>
+      <button class="dd" id="state-dd" type="button" aria-haspopup="listbox" aria-expanded="false" aria-disabled="true"><span class="dd-txt"><span class="dd-k" data-w="map.ddLabel">State</span><span class="dd-val" data-w="map.ddPlaceholder">Choose a state</span></span><svg class="chev" viewBox="0 0 8 8" width="12" height="12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M1 2h2v1h1v1h1V3h1V2h1v2H6v1H5v1H3V5H2V4H1z" fill="currentColor"/></svg></button>
     </div>
     <div id="tiles" role="group" aria-labelledby="map-h"><p class="loading" data-w="map.loading">Loading the map…</p></div>
     <ul id="legend"></ul>
   </section>
   <section id="panel" aria-labelledby="pn-title">
+    <p class="pn-loading" data-w="load.panel">Loading…</p>
     <div id="pn-head"></div>
     <div id="pn-overview"></div>
     <div id="pn-score" hidden></div>

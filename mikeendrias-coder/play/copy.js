@@ -145,6 +145,9 @@
     const lawStatusText = law => { const s = str(law && law.status).replace(/\s*\(.*$/, ''); return w('lawStatus.' + slug(s)) || s; };
     const stepShort = key => w('step.' + key + '.short') || str(key);
     const stepTitle = key => w('step.' + key + '.title') || str(key);
+    // A law's research flag covers this rule: its reviewRules when given, else every rule it adds (same test as L.stateProt).
+    const flagFor = (law, rule) => !!law && !!law.review &&
+      arr(Array.isArray(law.reviewRules) ? law.reviewRules : law.rules).map(String).includes(String(rule));
 
     /* ---------- dates ---------- */
     // "2026-11-18T22:14:41Z" or "2026-11-18" -> "Nov. 18, 2026". Read from the string, so no time zone shifts.
@@ -282,14 +285,19 @@
 
     /* ---------- law cards ---------- */
     // Plain strings for one law. rule (optional) adds the catch for that protection.
+    // With a rule, the Unclear tag shows only when the law's flag covers that rule. A flag that covers none of its
+    // rules (reviewRules []) is a note on a part we did not count, so it shows as that plain note.
     function lawCard(law, rule) {
       const l = law || {}, link = safeUrl(l.link);
+      const flag = rule ? flagFor(l, rule) : !!l.review;
+      const leftOut = !!rule && !!l.review && Array.isArray(l.reviewRules) && !l.reviewRules.length && !!l.reviewNote;
       return {
         name: str(l.name), meta: w('law.meta', { status: lawStatusText(l), year: str(l.year) }), status: lawStatusText(l),
         does: str(l.does), note: str(l.note),
         catchText: rule ? catchSentence(limitsOf(l, rule)) : '',
-        unclear: l.review ? { cls: 't-unclear', text: w('tag.unclear') } : null,
-        unclearText: l.review ? (l.reviewNote ? w('row.unsettled') + ' ' + w('row.unclearWhy') + ' ' + str(l.reviewNote) : w('row.unsettled')) : '',
+        unclear: flag ? { cls: 't-unclear', text: w('tag.unclear') } : null,
+        unclearText: flag ? (l.reviewNote ? w('row.unsettled') + ' ' + w('row.unclearWhy') + ' ' + str(l.reviewNote) : w('row.unsettled')) : '',
+        whyLabel: leftOut ? w('law.leftOut') : '', why: leftOut ? str(l.reviewNote) : '',
         citeLabel: w('law.cite'), cite: str(l.cite),
         link, linkText: link ? w('law.readLaw') : '', linkAria: link ? w('law.readLawAria', { name: str(l.name) }) + ' ' + w('a11y.newTab') : '',
         noQuote: w('law.noQuote')
@@ -416,12 +424,21 @@
       : arr(c && c.steps).some(s => arr(s.results).some(r => r.rule === '6' && r.status === 'na')));
     const misses = (h, c, ctx) => h && h.kind === 'partial' && isStill(c, ctx) && MISS_ON_STILL.includes(str(h.limit).toLowerCase())
       && (typeof L.limitType !== 'function' || L.limitType(h.limit) === 'narrow');
-    // {status, limit}: the line's status after that fix. limit is the code of the catch that misses, or null.
+    /* A Yes or Partly line that rests only on laws flagged unclear for this rule (NH HB 1688, reviewRules 1 and 6)
+       reads as Unclear, so the case matches the scorecard's "Partly, unclear" and the tally counts it as Partly.
+       logic.js keeps app.js parity, so this is done here. */
+    // {status, limit, base, flag}: the line's status after both fixes. limit is the code of the catch that misses, or null.
+    // base is the status before the unclear fix and flag is the flagged law, when that fix applied.
     function lineStatus(r, c, ctx) {
-      if (!r || r.status !== 'partial') return { status: r ? r.status : '', limit: null };
+      if (!r) return { status: '', limit: null, base: '', flag: null };
+      let st = r.status, limit = null;
       const parts = arr(r.hits).filter(h => h.kind === 'partial');
-      if (!parts.length || !parts.every(h => misses(h, c, ctx))) return { status: 'partial', limit: null };
-      return { status: arr(r.hits).some(h => h.kind === 'review') ? 'review' : 'bypassed', limit: parts[0].limit };
+      if (st === 'partial' && parts.length && parts.every(h => misses(h, c, ctx))) {
+        st = arr(r.hits).some(h => h.kind === 'review') ? 'review' : 'bypassed'; limit = parts[0].limit;
+      }
+      const win = st === 'covered' || st === 'partial' ? arr(r.hits).filter(h => h.kind === st) : [];
+      if (win.length && win.every(h => flagFor(h.law, r.rule))) return { status: 'review', limit, base: st, flag: win[0].law };
+      return { status: st, limit, base: st, flag: null };
     }
     // The step's agg after the fix above. Same rules as logic.computeCase; unchanged when no line changed.
     function stepAgg(c, step, ctx) {
@@ -439,7 +456,8 @@
         : st.includes('review') ? 'review'
         : st.includes('bypassed') ? 'bypassed' : 'gap';
     }
-    // L.tally(c) with the same fix applied, so the tally matches the lines the reader sees.
+    // L.tally(c) with the same fixes applied, so the tally matches the lines the reader sees.
+    const BUCKET = { covered: 'got', would: 'got', partial: 'soft', review: 'soft', bypassed: 'bypassed', gap: 'gap' };
     function tallyOf(c, ctx) {
       const t = Object.assign({ got: 0, soft: 0, bypassed: 0, gap: 0, total: 0 }, typeof L.tally === 'function' ? L.tally(c) : {});
       arr(c && c.steps).forEach(s => {
@@ -447,7 +465,8 @@
         arr(s.results).forEach(r => {
           const ls = lineStatus(r, c, ctx);
           if (ls.status === r.status) return;
-          t.soft--; if (ls.status === 'bypassed') t.bypassed++; else t.soft++;
+          const from = BUCKET[r.status], to = BUCKET[ls.status];
+          if (from) t[from]--; if (to) t[to]++;
         });
       });
       return t;
@@ -488,9 +507,21 @@
       if (top && top.reason) return str(top.reason);
       return w('catch.lineupArrest');
     }
+    // A line resting on a flagged law adds the research note, and the unsettled sentence when the step head lacks it.
     function lineText(state, c, step, r, ctx) {
+      const base = baseLineText(state, c, step, r, ctx), ls = lineStatus(r, c, ctx);
+      if (!ls.flag) return base;
+      const note = str(ls.flag.reviewNote).trim();
+      return [base, stepAgg(c, step, ctx) === 'review' ? '' : w('row.unsettled'), note ? w('row.unclearWhy') + ' ' + note : '']
+        .filter(Boolean).join(' ');
+    }
+    function baseLineText(state, c, step, r, ctx) {
       const v = sv(state), cx = ctx || {};
-      if (r.status === 'na') return w(r.has ? 'line.na.has' : 'line.na', v);
+      // A still photo: say the state limits live scanning only when it has the rule in full; a narrow rule says "some".
+      if (r.status === 'na') {
+        const lv = stateProt(state, r.rule).level;
+        return w(!r.has ? 'line.na' : lv === 'yes' ? 'line.na.has' : 'line.na.part', v);
+      }
       const ls = lineStatus(r, c, ctx);
       if (ls.limit) return ls.status === 'review' ? w('row.unsettled') : w('line.bypassed', sv(state, { reason: limitText(ls.limit) }));
       const why = (c && c.why) || {};
@@ -505,6 +536,10 @@
       if (r.status === 'bypassed') return w('line.bypassed', sv(state, { reason: reasonFor(r.top, cx) }));
       return w('line.gap', v);
     }
+    // A flagged line keeps its answer in the tag: "Yes, unclear" or "Partly, unclear".
+    const lineTag = ls => (ls.flag && AGG[ls.base]
+      ? { cls: 't-unclear', text: w('tag.unclearOf', { status: w(AGG[ls.base][1]) }) || w('tag.unclear'), note: '' }
+      : stepTag(ls.status));
     const isStopLine = (c, step, r) => step.agg === 'stop' && c && c.why &&
       (c.why.kind === 'crime' ? r.rule === '3' : c.why.kind === 'bar' && r.top && sameLaw(r.top.law, c.why.law));
     // The lines under one step: [{kind, rule, at, label, tag, text, law?}]. kind is 'rule', 'ban', 'other' or 'note'.
@@ -526,7 +561,7 @@
         return {
           kind: 'rule', rule: r.rule, at: r.at || null,
           label: r.rule === '4' && r.at === 'lineup' ? w('line.lineupLabel') : protName(r.rule),
-          tag: stepTag(stop ? 'stop' : lineStatus(r, c, ctx).status), text: lineText(state, c, step, r, cx)
+          tag: stop ? stepTag('stop') : lineTag(lineStatus(r, c, ctx)), text: lineText(state, c, step, r, cx)
         };
       };
       if (rs.length && stopIdx >= 0) out.push(mk(rs.shift()));

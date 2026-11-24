@@ -53,7 +53,7 @@ const INIT = `(() => {
 const PAGE_CHECKS = (opts) => {
   opts = opts || {};
   const want = (k) => !opts.only || opts.only.includes(k);
-  const out = { align: [], clip: [], overlap: [], target: [], font: [], img: [], native: [], placeholder: [] };
+  const out = { align: [], clip: [], overlap: [], squeeze: [], target: [], font: [], img: [], native: [], placeholder: [] };
   const pop = [...document.querySelectorAll('[role=listbox]')].find((p) => !p.closest('[hidden]') && p.getClientRects().length && getComputedStyle(p).visibility !== 'hidden');
   const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
     return r.width > 1 && r.height > 1 && cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0 && !el.closest('.sr-only, #tip, [aria-hidden="true"], [inert]'); };
@@ -104,6 +104,15 @@ const PAGE_CHECKS = (opts) => {
     const cs = getComputedStyle(el);
     if ((/hidden|clip/.test(cs.overflowX) || cs.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1) out.clip.push(`text clipped: ${name(el)} (${el.scrollWidth} > ${el.clientWidth})`);
     else if ((/hidden|clip/.test(cs.overflowY) || (cs.webkitLineClamp && cs.webkitLineClamp !== 'none')) && el.scrollHeight > el.clientHeight + 1) out.clip.push(`text cut off at the bottom: ${name(el)} (${el.scrollHeight} > ${el.clientHeight})`);
+  }
+  // text squeezed into a sliver: over 8 characters of its own text, under 48px wide, taller than 3 lines
+  if (want('squeeze')) for (const el of document.querySelectorAll('body *')) {
+    if (!vis(el)) continue;
+    const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, ' ').trim();
+    if (own.length <= 8) continue;
+    const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    const lh = parseFloat(cs.lineHeight) || 1.2 * parseFloat(cs.fontSize);
+    if (r.width < 48 && r.height > 3 * lh) out.squeeze.push(`text squeezed into a sliver ${r.width.toFixed(0)}x${r.height.toFixed(0)}: ${name(el)}`);
   }
   const hits = [...document.querySelectorAll('button, a[href], input, select, textarea, [role=button], [role=option], [role=tab], [tabindex]:not([tabindex="-1"])')]
     .filter(vis).filter((e) => !pop || pop.contains(e) || !e.closest('[role=listbox]'));

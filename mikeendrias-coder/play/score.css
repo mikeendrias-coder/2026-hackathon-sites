@@ -22,10 +22,15 @@
 .ov-rows { margin: 16px 0 20px; border-top: 2px solid var(--light, #DCE6F7); }
 .ov-row { border-bottom: 2px solid var(--light, #DCE6F7); }
 .ov-row > .acc-h, .sc-rows .acc > .acc-h { margin: 0; font-size: inherit; font-weight: inherit; }
-.ov-hd { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; text-align: left; }
-.ov-hd .px { width: 32px; height: 32px; flex: none; }
-.ov-name { flex: 1 1 auto; min-width: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
-.ov-count { flex: none; font-size: 14px; font-weight: 700; color: var(--muted, #4D5F7A); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The count drops to its own line under the name when both will not fit, so a long count never squeezes the name.
+   The icon sits in the 44px gutter, so a dropped count lines up with the name and the body text. */
+.ov-hd {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; flex: 1 1 auto;
+  min-width: 0; min-height: 32px; padding-left: 44px; text-align: left;
+}
+.ov-hd .px { position: absolute; left: 0; top: 50%; width: 32px; height: 32px; margin-top: -16px; }
+.ov-name { flex: 1 1 8em; min-width: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--navy, #0C2340); }
+.ov-count { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 700; color: var(--muted, #4D5F7A); font-variant-numeric: tabular-nums; }
 .ov-body { padding: 0 0 16px 44px; }
 .ov-why { margin: 0; font-size: 15px; line-height: 1.5; }
 .ov-none { margin: 10px 0 0; font-size: 15px; color: var(--muted, #4D5F7A); }

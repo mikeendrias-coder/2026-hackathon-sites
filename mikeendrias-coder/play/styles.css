@@ -193,7 +193,8 @@ noscript .box { margin: 24px auto 0; }
 }
 .board:focus-visible { outline-offset: 6px; }
 #map { grid-area: map; min-width: 0; padding: var(--cell); border-bottom: var(--frame);
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "h dd" "tiles tiles" "legend legend"; gap: 16px 16px; align-content: start; }
+  display: grid; grid-template-columns: minmax(0, 1fr) fit-content(50%); grid-template-areas: "h dd" "tiles tiles" "legend legend"; gap: 16px 16px; align-content: start; }
+/* The dropdown takes at most half the row (long Sheet words wrap inside it), so the heading always keeps the other half. */
 #map-h { grid-area: h; align-self: center; font: 800 20px/1.2 var(--font); }
 .map-pick { grid-area: dd; min-width: 0; }
 #tiles { grid-area: tiles; }
@@ -201,6 +202,8 @@ noscript .box { margin: 24px auto 0; }
 #panel { grid-area: panel; min-width: 0; padding: var(--cell); border-bottom: var(--frame); background: #FFFFFF;
   display: flex; flex-direction: column; scroll-padding-top: 16px; }
 #panel > #pn-head:empty { display: none; }
+.pn-loading { display: none; color: var(--muted); font-size: 15px; }
+body.is-loading .pn-loading { display: block; }
 #pn-overview, #pn-score, #pn-case { flex: 1 0 auto; display: flex; flex-direction: column; min-width: 0; }
 #examples { grid-area: ex; min-width: 0; padding: var(--cell); display: flex; flex-direction: column; gap: 16px; }
 #ex-h { font: 800 20px/1.2 var(--font); }
@@ -217,9 +220,12 @@ noscript .box { margin: 24px auto 0; }
   font: 600 16px/1.25 var(--font); text-align: left; cursor: pointer;
 }
 .dd:hover { background: var(--light); }
-.dd .dd-txt { display: block; flex: 1 1 auto; min-width: 0; }
+.dd .dd-txt { display: block; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .dd .dd-k { margin-right: 10px; font: 700 12.5px/1.25 var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .dd.is-empty .dd-val { color: var(--muted); font-weight: 500; }
+/* Until the data is in, the dropdown is off and says so; a deep link's state is not known yet. */
+.dd[aria-disabled="true"], .dd[aria-disabled="true"]:hover { cursor: progress; background: #FFFFFF; color: var(--muted); border-color: var(--mid); box-shadow: 4px 4px 0 var(--mid); }
+.dd[aria-disabled="true"] .dd-val { visibility: hidden; }
 .dd-pop { position: fixed; z-index: 80; background: #FFFFFF; border: var(--frame); box-shadow: 5px 5px 0 var(--navy); padding: 4px; }
 .dd-list { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; outline: none; padding: 2px; }
 .dd-list:focus-visible { outline: none; }
@@ -283,6 +289,7 @@ noscript .box { margin: 24px auto 0; }
 .foot-gloss { min-width: 0; align-self: start; border: 2px solid var(--navy); background: #FFFFFF; }
 .foot-gloss .acc-b { padding: 8px 12px; font-size: 15px; }
 .foot-gloss .acc-p { padding: 4px 12px 12px; }
+.gloss-peek { display: none; }
 .gloss { display: grid; gap: 10px; }
 .gloss dt { font-weight: 700; color: var(--navy); }
 .gloss dd { margin: 2px 0 0; }
@@ -311,8 +318,11 @@ body.is-offline #intro { display: block; }
   #examples { border-right: var(--frame); }
   #panel { border-bottom: 0; }
   .foot-in { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
-  /* Both footer columns end flush: the glossary box runs down to the end of the left column. */
+  /* Both footer columns end flush: the closed glossary box lists its terms, then runs down to the end of the left column. */
   .foot-gloss { align-self: stretch; }
+  .foot-gloss .gloss-peek { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0 12px 12px; cursor: pointer; }
+  .foot-gloss:has(.acc-b[aria-expanded="true"]) .gloss-peek { display: none; }
+  .gloss-peek li { flex: 1 1 auto; min-width: 0; padding: 3px 8px; border: 2px solid var(--light); color: var(--navy); font-weight: 500; overflow-wrap: anywhere; }
 }
 /* The panel sticks beside the map only when there is room for it. */
 @media (min-width: 1024px) and (min-height: 640px) {

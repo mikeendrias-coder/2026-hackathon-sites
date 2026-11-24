@@ -159,11 +159,44 @@ if (D && dumpOk) {
       // A line's tag and its text must agree: "Partly" text only under a Partly tag, "doesn't reach" text never under one.
       const partWord = norm(W.FV_WORDS['tag.part'] || 'Partly') + '.';
       lines.forEach(l => {
-        const x = norm(l.text), part = !!l.tag && l.tag.cls === 't-part';
+        // "Partly, unclear" (a flagged law) is a Partly tag too.
+        const part = !!l.tag && (l.tag.cls === 't-part' || (l.tag.cls === 't-unclear' && norm(l.tag.text).startsWith(partWord.slice(0, -1))));
+        const x = norm(l.text);
         if (part && reachWords && x.toLowerCase().includes(reachWords)) fact(where, `line tagged Partly says the law misses the case: "${l.text}"`);
         if (!part && x.startsWith(partWord)) fact(where, `line says Partly under a "${l.tag ? l.tag.text : ''}" tag: "${l.text}"`);
       });
       c.steps.forEach(s => { const a = C.stepAgg(c, s, ctx); if (s.agg === 'skip' ? a !== 'skip' : false) fact(where, 'a skipped step changed status'); });
+      // A line resting only on laws flagged unclear for its rule shows an Unclear tag and is never counted as Protected.
+      c.steps.forEach(s => {
+        if (s.agg === 'skip' || s.key === 'trial') return;
+        if (s.agg !== 'stop') C.stepLines(st, c, s, ctx).filter(l => l.kind === 'rule').forEach(l => {
+          const r = s.results.find(x => x.rule === l.rule && (x.at || null) === l.at); if (!r) return;
+          // After the still-photo fix (a live-scanning-only catch misses a still photo, so that line reads No).
+          const st0 = C.lineStatus(r, c, ctx).base || r.status;
+          const win = (r.hits || []).filter(h => h.kind === st0 && (st0 === 'covered' || st0 === 'partial'));
+          const flagged = win.length && win.every(h => h.law.review && (Array.isArray(h.law.reviewRules) ? h.law.reviewRules : h.law.rules || []).map(String).includes(String(r.rule)));
+          if (flagged && (!l.tag || l.tag.cls !== 't-unclear')) fact(where, `line rests on a law flagged unclear but is tagged "${l.tag ? l.tag.text : ''}": "${l.text}"`);
+        });
+        // A one-rule step's detail line must not repeat the step head.
+        const head = norm(C.stepHead(st, c, s, ctx)), ls = C.stepLines(st, c, s, ctx);
+        if (ls.length === 1 && head && norm(ls[0].text).startsWith(head)) fact(where, `step ${s.key} line repeats the head: "${ls[0].text}"`);
+      });
+      // "{State} limits live scanning" only when the state has that rule in full.
+      const fullNa = norm(W.FV_WORDS['line.na.has'] || '').replace(/\{TheState\}/g, norm(st === 'District of Columbia' ? 'The District of Columbia' : st));
+      if (L.stateProt(st, '6').level !== 'yes' && lines.some(l => norm(l.text) === fullNa)) fact(where, 'a still-photo line says the state limits live scanning, but its rule is only partial');
+    }));
+    // NH HB 1688 is flagged for rules 1 and 6: the state/camera case must show it as unclear and count it as Partly.
+    if (L.states().includes('New Hampshire')) {
+      const nctx = { who: 'state', src: 'cctv', db: 'dmv', crime: 'serious' }, nc = L.computeCase('New Hampshire', nctx);
+      const nl = nc.steps.flatMap(s => C.stepLines('New Hampshire', nc, s, nctx));
+      const six = nl.find(l => l.rule === '6'), nt = C.tallyOf(nc, nctx);
+      if (!six || !six.tag || six.tag.cls !== 't-unclear') fact('New Hampshire state/cctv/dmv/serious', 'the live-scanning line is not tagged unclear');
+      if (nt.got !== 0) fact('New Hampshire state/cctv/dmv/serious', `the tally counts ${nt.got} unclear check(s) as Protected`);
+    }
+    // A law card under a row shows Unclear only when the row itself is flagged for that rule (Colorado SB 22-113).
+    L.states().forEach(st => ['1', '2', '3', '4', '5', '6', '7'].forEach(rule => {
+      const row = C.row(st, rule);
+      if (!row.unclear && row.laws.some(k => k.unclear)) fact(`${st} row ${rule}`, 'a law card says Unclear under a row that is not flagged');
     }));
     factsOk = true;
   } catch (e) {

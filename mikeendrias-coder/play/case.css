@@ -56,7 +56,8 @@
 .cs-step.is-stop .cs-node { box-shadow: 3px 3px 0 var(--navy, #0C2340); }
 .cs-step.is-skip .cs-node { border-color: var(--mid, #9DB5E0); }
 
-.cs-sb { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: start; }
+/* the tag may take up to 60% of the row; past that it wraps, so the step number keeps room */
+.cs-sb { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) fit-content(60%); column-gap: 8px; align-items: start; }
 .cs-sb > * { grid-column: 1 / -1; }
 .cs-num {
   grid-column: 1; grid-row: 1; align-self: center; min-height: 24px; display: flex; align-items: center;
@@ -71,11 +72,11 @@
 
 .cs-lines { list-style: none; margin: 8px 0 0; padding: 0; border-top: 2px solid var(--light, #DCE6F7); }
 .cs-line {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) fit-content(60%); column-gap: 8px; align-items: center;
   margin: 0; padding: 8px 0; border-bottom: 2px solid var(--light, #DCE6F7);
 }
 .cs-line-l { min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
-.cs-line > .tag { justify-self: end; }
+.cs-line > .tag { justify-self: end; overflow-wrap: anywhere; }
 .cs-line-t { grid-column: 1 / -1; margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; }
 .cs-k-other .cs-line-l { font-weight: 600; }
 

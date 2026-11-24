@@ -33,7 +33,7 @@ Node finds Playwright at `/home/michael/work/node_modules`. `check-defaults.cjs`
 node qa/play-qa.cjs                       # 6 sizes, 16 scenarios, keyboard and reduced-motion passes
 node qa/play-qa.cjs --vp 390 --only maryland,keyboard --shots
 node qa/worst-data.cjs                    # writes the worst-case data sets to qa/out/worst/
-node qa/worst-data.cjs --run              # loads each set at 390 and 1440, plus a slow network
+node qa/worst-data.cjs --run              # loads each set at 320, 390 and 1440, plus a slow network
 node qa/root-compat.cjs                   # root app with v1 data vs v2 data
 NODE_PATH=/home/michael/work/node_modules node qa/check-defaults.cjs \
   'http://127.0.0.1:8765/play/#/maryland@click=.acc-b' 'http://127.0.0.1:8765/play/#/maryland/case?photo=drone'
@@ -52,6 +52,7 @@ Each scenario checks its own content through the DOM contract (contract.md §7),
 6. Focus walk of up to 80 Tab stops: a 2px ring or a box-shadow, on screen, uncovered. An open listbox popup is closed with Escape first
 7. Targets at least 24×24 (map tiles at least 23.5)
 8. Text at least 11px, no clipped text, no overlapping controls, no broken images
+   No squeezed text: over 8 characters of its own text in a box under 48px wide and over 3 lines tall
 9. Icons centered on single-line text, and text centered in buttons, chips and tags
 10. No leftover `{word}`, undefined, NaN, null or [object Object] in text or labels, and no raw word key (like `risk.heading`) on screen or in an aria-label
 11. Board columns end flush at 1024 and wider
@@ -63,7 +64,7 @@ Each scenario checks its own content through the DOM contract (contract.md §7),
 Output: `qa/out/play-qa.json`, screenshots in `qa/out/shots/<size>/<scenario>.png`, and a last line `TOTAL ISSUES N`. Exit code 1 when N is above 0.
 
 **worst-data.cjs.** Builds 14 data sets from `data/live.json` (design §5.4): long-names, intl-text, html-injection, empty-quotes, missing-bits, zero-bills, many-bills, odd-rules, puerto-rico, no-config, long-words, offline-long, offline-empty, offline-from.
-`require('./worst-data.cjs').build()` returns them for other scripts. `--run` serves each one by route interception and reports errors, clipping, overlap, sideways scroll, placeholders, dialogs, `javascript:` links and injected HTML.
+`require('./worst-data.cjs').build()` returns them for other scripts. `--run` serves each one by route interception and reports errors, clipping, overlap, squeezed text, sideways scroll, placeholders, dialogs, `javascript:` links and injected HTML.
 The slow-network case throttles to 400 kbps with 400ms RTT at 390. It needs the `is-loading` state and CLS under 0.1. Last line: `WORST ISSUES N`.
 
 **root-compat.cjs.** Loads the root app twice: (A) with `data/live.json` and (B) with a v2 file. B is `sheet/test/out/v2-preview.json` when it exists; otherwise the script builds one from live.json.

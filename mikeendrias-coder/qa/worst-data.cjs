@@ -156,7 +156,7 @@ async function run(opts) {
   const report = { url: opts.url, results: [] }; let total = 0;
   const print = (label, f) => { console.log(`${label} issues: ${f.length}`); f.slice(0, 8).forEach((x) => console.log('    ' + x)); total += f.length; report.results.push({ case: label, issues: f }); };
   try {
-    for (const name of names) for (const w of [390, 1440]) {
+    for (const name of names) for (const w of [320, 390, 1440]) {
       const plan = PLAN[name] || { hashes: ['#/'] };
       const vp = P.VIEWPORTS.find((v) => v.w === w);
       const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, isMobile: vp.mobile, hasTouch: vp.mobile });
@@ -187,7 +187,7 @@ async function run(opts) {
             if (pr.tile) f.push(`${h}: Puerto Rico has a map tile`);
             if (!pr.opt) f.push(`${h}: Puerto Rico missing from the dropdown`);
           }
-          const res = await pg.evaluate(P.PAGE_CHECKS, { only: ['clip', 'overlap', 'placeholder', 'img'] });
+          const res = await pg.evaluate(P.PAGE_CHECKS, { only: ['clip', 'overlap', 'squeeze', 'placeholder', 'img'] });
           for (const [k, v] of Object.entries(res)) for (const x of v) f.push(`${h} ${k}: ${x}`);
           const x = await pg.evaluate(() => ({
             js: [...document.querySelectorAll('a[href]')].filter((a) => /^\s*javascript:/i.test(a.getAttribute('href'))).map((a) => a.textContent.trim().slice(0, 30)),
