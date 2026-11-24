@@ -52,9 +52,13 @@
       var gap = 8, below = innerHeight - r.bottom - gap - 12, above = r.top - gap - 12;
       var want = Math.min(list.scrollHeight + 14, 360);
       var up = below < Math.min(want, 220) && above > below;
-      list.style.maxHeight = Math.max(120, Math.min(340, (up ? above : below) - 14)) + 'px';
+      // A short screen (400% zoom) gets a shorter list, down to two rows, so the popup stays on screen.
+      list.style.maxHeight = Math.max(80, Math.min(340, (up ? above : below) - 14)) + 'px';
       pop.style.left = Math.max(8, Math.min(vw - w - 8, r.left)) + 'px';
-      pop.style.top = (up ? r.top - gap - pop.offsetHeight : r.bottom + gap) + 'px';
+      var h = pop.offsetHeight, top = up ? r.top - gap - h : r.bottom + gap;
+      // Keep it inside the screen while its button is on screen; once the page scrolls the button away, it follows.
+      if (r.bottom > 0 && r.top < innerHeight) top = Math.max(8, Math.min(innerHeight - h - 8, top));
+      pop.style.top = top + 'px';
       pop.classList.toggle('up', up);
     }
     function setActive(i, center) {

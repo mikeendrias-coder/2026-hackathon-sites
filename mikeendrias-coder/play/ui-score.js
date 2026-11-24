@@ -45,14 +45,15 @@
     return '<p class="sc-links">' + FV.h.lnk(card.link, card.linkText, { cls: 'sc-read', attrs: ' aria-label="' + esc(card.linkAria) + '"' }) + '</p>';
   }
   /* One law inside a row, the ban card, the zero card or the other-laws list.
-     opt.rule: quotes for that protection only. opt.does: always show what the law does. */
+     opt.rule: quotes for that protection only. opt.does: always show what the law does.
+     opt.rowCatch: the catch line the row already shows; the card skips the same line. */
   function lawHTML(state, law, card, opt) {
     opt = opt || {};
     var qs = quotesFor(state, law.name, opt.rule == null ? null : opt.rule);
     var body = '';
     if (opt.does || !qs.length) body += p('sc-does', esc(card.does));
     if (card.whyLabel || card.why) body += p('sc-whynot', (card.whyLabel ? '<span class="sc-label">' + esc(card.whyLabel) + '</span> ' : '') + esc(card.why));
-    if (card.catchText) body += p('sc-catch', esc(card.catchText));
+    if (card.catchText && card.catchText !== opt.rowCatch) body += p('sc-catch', esc(card.catchText));
     if (card.unclearText) body += p('sc-unclear', esc(card.unclearText));
     body += qs.map(quoteHTML).join('');
     if (!qs.length) body += p('sc-noq', esc(card.noQuote));
@@ -65,10 +66,11 @@
       readLink(card) + '</div>';
   }
   // A labelled list of state chips; each chip opens that state's scorecard.
+  // pre keeps ids apart per view ('ov-sl-' or 'sc-sl-'): the hidden overview stays in the DOM.
   var chipN = 0;
-  function states(label, list) {
+  function states(label, list, pre) {
     if (!list || !list.length) return '';
-    var id = 'pn-sl-' + (++chipN);
+    var id = pre + (++chipN);
     return '<div class="pn-states"><p class="sc-label" id="' + id + '">' + esc(label) + '</p>' +
       '<ul class="pn-chips" aria-labelledby="' + id + '">' + list.map(function (s) {
         return '<li><button class="chip" type="button" data-st="' + esc(s) + '">' + esc(s) + '</button></li>';
@@ -88,10 +90,12 @@
       var head = '<span class="ov-hd">' + img(L.PICON[k], 32, 'ov-ico') +
         '<span class="ov-name">' + esc(o.name) + '</span> <span class="ov-count">' + esc(o.count) + '</span></span>';
       var body = '<div class="ov-body">' + p('ov-why', esc(o.why)) +
-        states(o.fullLabel, o.yes) + states(o.partLabel, o.part) + p('ov-none', esc(o.none)) + '</div>';
+        states(o.fullLabel, o.yes, 'ov-sl-') + states(o.partLabel, o.part, 'ov-sl-') + p('ov-none', esc(o.none)) + '</div>';
       h += FV.h.acc({ id: 'ov-' + k, cls: 'ov-row', attrs: ' data-rule="' + esc(k) + '"', head: head, body: body, open: open === k });
     });
-    el.innerHTML = h + '</div></div>';
+    // The bar ends the panel flush (packed rule). ov.pick is new (B2 r1); map.heading has the same words until it lands.
+    var pick = W(FV.hasW('ov.pick') ? 'ov.pick' : 'map.heading');
+    el.innerHTML = h + '</div><button class="btn ghost ov-pick" type="button">' + esc(pick) + ARROW + '</button></div>';
     if (open) openLater(el.querySelector('.ov-row[data-rule="' + open + '"] .acc-b'));
   }
 
@@ -157,9 +161,9 @@
       (o.billNotes || []).slice(0, 2).map(function (t) { return p('sc-bnote', esc(t)); }).join('') + '</div>';
     var body = '<div class="sc-body">';
     if (o.level === 'no') {
-      body += p('sc-no', esc(o.noText)) + states(o.hasFullLabel, o.hasFull);
+      body += p('sc-no', esc(o.noText)) + states(o.hasFullLabel, o.hasFull, 'sc-sl-');
     } else {
-      body += o.laws.map(function (card, i) { return lawHTML(st, sp.laws[i] || {}, card, { rule: k }); }).join('');
+      body += o.laws.map(function (card, i) { return lawHTML(st, sp.laws[i] || {}, card, { rule: k, rowCatch: o.catchText }); }).join('');
     }
     body += p('sc-nat', esc(o.national)) + '</div>';
     return FV.h.acc({
@@ -188,7 +192,7 @@
     var L = FV.L, C = FV.C;
     if (String(L.LAST) === '-Infinity' || !L.LAST) return '';
     var bills = L.sessionBills(st) || [];
-    if (!bills.length) return '<div class="sc-bills sc-bills-none"><span class="sc-hd">' + img('bill', 32, 'sc-ico') + p('sc-name', esc(C.billsNone(st))) + '</span></div>';
+    if (!bills.length) return '<div class="sc-bills sc-bills-none"><span class="sc-hd">' + img('bill', 32, 'sc-ico') + '<span class="sc-name">' + esc(C.billsNone(st)) + '</span></span></div>';
     var head = '<span class="sc-hd">' + img('bill', 32, 'sc-ico') + '<span class="sc-name">' + esc(C.billsHeading(st)) + '</span></span>';
     return FV.h.acc({ id: 'sc-bills', cls: 'sc-bills', head: head, body: '<div class="sc-body">' + bills.map(billHTML).join('') + '</div>', open: open });
   }
@@ -226,7 +230,7 @@
     dd.focus({ preventScroll: FV.isPhone() });
   }
   function pickState(st) {
-    FV.go({ st: st, view: 'score', open: null }, { push: true });
+    FV.go({ st: st, view: 'score', open: null, ex: null }, { push: true });
     var a = document.activeElement;
     if (a && a !== document.body && document.body.contains(a) && !a.closest('[hidden]')) return; // ui-core already placed focus
     var t = FV.$('pn-title'); if (!t) return;
@@ -247,7 +251,7 @@
       if (nb && document.activeElement !== nb) nb.focus({ preventScroll: true });
       return;
     }
-    if (tg.closest('.pn-change') || tg.closest('.pn-again')) { openPicker(); return; }
+    if (tg.closest('.pn-change') || tg.closest('.pn-again') || tg.closest('.ov-pick')) { openPicker(); return; }
     // Tapping a row's summary lines opens the row too (the button stays the keyboard control).
     var sum = tg.closest('.sc-sum');
     if (sum && !tg.closest('a, button')) {

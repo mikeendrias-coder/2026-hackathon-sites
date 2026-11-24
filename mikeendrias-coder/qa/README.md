@@ -48,12 +48,12 @@ Each scenario checks its own content through the DOM contract (contract.md §7),
 2. axe with wcag2a, wcag2aa, wcag21a, wcag21aa and wcag22aa
 3. No `select`, `details`, `[title]`, svg `<title>` or autofill inputs
 4. Any `alert`, `confirm` or `prompt` call counts as an issue
-5. No sideways scroll (scrolling down is fine)
-6. Focus walk of up to 80 Tab stops: a 2px ring or a box-shadow, on screen, uncovered
+5. No sideways scroll, measured against the page's clientWidth (phone emulation widens innerWidth), and no element past the right edge
+6. Focus walk of up to 80 Tab stops: a 2px ring or a box-shadow, on screen, uncovered. An open listbox popup is closed with Escape first
 7. Targets at least 24×24 (map tiles at least 23.5)
 8. Text at least 11px, no clipped text, no overlapping controls, no broken images
 9. Icons centered on single-line text, and text centered in buttons, chips and tags
-10. No leftover `{word}`, undefined, NaN, null or [object Object] in text or labels
+10. No leftover `{word}`, undefined, NaN, null or [object Object] in text or labels, and no raw word key (like `risk.heading`) on screen or in an aria-label
 11. Board columns end flush at 1024 and wider
 12. Text spacing override (WCAG 1.4.12) at 390: no clipping or overlap
 13. Zero console errors (the data-404 case only counts errors after Try again)

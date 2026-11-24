@@ -190,12 +190,11 @@ async function run(opts) {
           const res = await pg.evaluate(P.PAGE_CHECKS, { only: ['clip', 'overlap', 'placeholder', 'img'] });
           for (const [k, v] of Object.entries(res)) for (const x of v) f.push(`${h} ${k}: ${x}`);
           const x = await pg.evaluate(() => ({
-            sw: document.documentElement.scrollWidth, iw: innerWidth,
             js: [...document.querySelectorAll('a[href]')].filter((a) => /^\s*javascript:/i.test(a.getAttribute('href'))).map((a) => a.textContent.trim().slice(0, 30)),
             inj: document.querySelectorAll('img[src="x"], [onerror]').length,
             spy: window.__qaDialogs || [],
           }));
-          if (x.sw > x.iw + 1) f.push(`${h}: page scrolls sideways ${x.sw} > ${x.iw}`);
+          for (const m of P.sidewaysIssues(await pg.evaluate(P.SIDEWAYS), h + ': ')) f.push(m);
           for (const t of x.js) f.push(`${h}: javascript: link kept ("${t}")`);
           if (x.inj) f.push(`${h}: injected HTML became ${x.inj} live element(s)`);
           for (const s of x.spy.concat(dialogs.map((t) => 'native ' + t))) f.push(`${h}: dialog called: ${s}`);

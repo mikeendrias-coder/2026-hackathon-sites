@@ -16,8 +16,10 @@
 .pn-chips li { display: flex; }
 
 /* ---------- overview ---------- */
+/* A column that fills the panel; the "Pick your state" bar sits at the bottom. */
+.ov { display: flex; flex-direction: column; flex: 1 1 auto; }
 .ov-intro { margin: 8px 0 0; font-size: 16px; line-height: 1.55; color: var(--muted, #4D5F7A); }
-.ov-rows { margin: 16px 0 0; border-top: 2px solid var(--light, #DCE6F7); }
+.ov-rows { margin: 16px 0 20px; border-top: 2px solid var(--light, #DCE6F7); }
 .ov-row { border-bottom: 2px solid var(--light, #DCE6F7); }
 .ov-row > .acc-h, .sc-rows .acc > .acc-h { margin: 0; font-size: inherit; font-weight: inherit; }
 .ov-hd { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; text-align: left; }
@@ -131,7 +133,7 @@
 /* bills */
 .sc-bill + .sc-bill { margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--light, #DCE6F7); }
 .sc-bill-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
-.sc-bill-h { margin: 0; flex: 1 1 14ch; min-width: 0; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--navy, #0C2340); }
+.sc-bill-h { margin: 0; flex: 1 1 22ch; min-width: 0; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--navy, #0C2340); }
 .sc-bill .t-alive { background: var(--blue, #1F5BB8); color: #fff; border-color: var(--navy, #0C2340); }
 .sc-bill .t-over { background: #fff; color: var(--muted, #4D5F7A); border-color: var(--mid, #9DB5E0); border-style: dotted; }
 .sc-imps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; }
@@ -145,9 +147,16 @@
 .sc-imp.k-loose { border-color: var(--warn, #B77900); background: var(--warn-bg, #FFF3D9); }
 .sc-imp.k-same, .sc-imp.k-have, .sc-imp.k-none { border-color: var(--mid, #9DB5E0); border-style: dashed; }
 
-/* "Pick another state" bar: it takes up any spare height above it, so the panel ends flush */
-.pn-again { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 4px); margin: auto 4px 4px 0; }
-.pn-again .arrow { flex: none; }
+/* "Pick another state" / "Pick your state" bars: each takes up any spare height above it, so the panel ends flush */
+.pn-again, .ov-pick { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 4px); margin: auto 4px 4px 0; }
+.pn-again .arrow, .ov-pick .arrow { flex: none; }
+
+/* desktop: the panel is taller than the seven rows, so the rows share the spare height (packed rule) */
+@media (min-width: 1024px) {
+  .ov-rows { display: flex; flex-direction: column; flex: 1 0 auto; }
+  .ov-row { display: flex; flex-direction: column; flex: 1 0 auto; }
+  .ov-row > .acc-h { display: flex; flex: 1 0 auto; }
+}
 
 /* phones: no indent under the icon, so text gets the full width */
 @media (max-width: 399px) {

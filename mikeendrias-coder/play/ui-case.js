@@ -103,8 +103,9 @@
       if (lines.length === 1 && extra.length) h += '<p class="cs-detail">' + esc(extra[0].text) + '</p>';
       else if (lines.length > 1) h += '<ul class="cs-lines">' + lines.map(function (l) { return lineHtml(l, c); }).join('') + '</ul>';
     }
-    var pslug = C.stepOpen(s);
-    var rule = s.checks && s.checks[0] && s.checks[0][0];
+    // Open the rule that stopped the search here, else the first rule that applies to this case (copy-api stepOpen).
+    var pslug = C.stepOpen(s, c, ctx);
+    var rule = C.stepOpenRule ? C.stepOpenRule(s, c, ctx) : (s.checks && s.checks[0] && s.checks[0][0]);
     // Never-reached steps carry only the never-reached sentence; their row is one tap away in the scorecard.
     if (pslug && agg !== 'skip') {
       h += FV.h.lnk('#/' + L.slug(st) + '?open=' + pslug, FV.W('case.seeLaw'), {
@@ -126,7 +127,7 @@
           return '<span class="cs-tn cs-tn-' + esc(x.key) + '"><b>' + esc(x.n) + '</b><span>' + esc(x.label) + '</span></span>';
         }).join('') + '</div><p class="cs-of" aria-hidden="true">' + esc(tl.of) + '</p></div>';
     return '<div class="cs-result">' +
-      '<p class="cs-stamp ' + (stopped ? 'is-stop' : 'is-through') + '">' + FV.h.img(stopped ? 'gate-closed' : 'status-open', 24) +
+      '<p class="cs-stamp ' + (stopped ? 'is-stop' : 'is-through') + '">' + FV.h.img(stopped ? 'gate-closed' : 'status-bypassed', 24) +
       '<span>' + esc(C.resultStamp(c)) + '</span></p>' +
       '<p class="cs-rs">' + esc(C.resultSentence(st, c, ctx)) + '</p>' + tally + '</div>';
   }
@@ -180,14 +181,17 @@
     var ex = exById(id);
     if (!ex) return;
     var ctx = FV.L.normCtx(ex);
+    var r0 = FV.route || {}, same = r0.view === 'case' && r0.st === ex.state && r0.ex === ex.id;
     FV.go({ st: ex.state, view: 'case', ctx: ctx, ex: ex.id, open: null }, { push: true });
-    // ui-core's after() moves focus and scroll (design §2.9). Only if no core is registered, do the same here.
-    if (!(FV.mods.core && FV.mods.core.after)) {
+    // ui-core's after() moves focus and scroll and announces a newly opened case (design §2.9).
+    // Only if no core is registered, do the same here. Re-opening the open example still gets one announcement.
+    var core = FV.mods.core && FV.mods.core.after;
+    if (!core) {
       var head = document.getElementById('pn-title'), panel = document.getElementById('panel');
       if (FV.isPhone() && panel) panel.scrollIntoView({ behavior: FV.reduced() ? 'auto' : 'smooth', block: 'start' });
       if (head) head.focus({ preventScroll: true });
     }
-    FV.say(FV.C.sayCase(ex.state, FV.L.computeCase(ex.state, ctx)));
+    if (!core || same) FV.say(FV.C.sayCase(ex.state, FV.L.computeCase(ex.state, ctx)));
   }
 
   /* ---------- events ---------- */

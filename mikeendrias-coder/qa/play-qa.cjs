@@ -137,10 +137,50 @@ const PAGE_CHECKS = (opts) => {
     for (const e of document.querySelectorAll('[aria-label], [aria-description]')) texts.push(['aria', (e.getAttribute('aria-label') || '') + ' ' + (e.getAttribute('aria-description') || '')]);
     texts.push(['title', document.title]);
     for (const [where, t] of texts) for (const re of bad) { re.lastIndex = 0; let m; while ((m = re.exec(t))) { out.placeholder.push(`${where}: "${t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ')}"`); if (out.placeholder.length > 30) break; } }
+    // raw word keys on screen: a text node or aria-label that is a FV_WORDS key, or has the key shape with a known key prefix
+    const W = window.FV_WORDS || {};
+    const heads = new Set(Object.keys(W).map((k) => k.split('.')[0]));
+    const isKey = (s) => !!s && (Object.prototype.hasOwnProperty.call(W, s) || (/^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9-]+)+$/.test(s) && heads.has(s.split('.')[0])));
+    if (document.body) {
+      const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        const s = n.textContent.trim(), p = n.parentElement;
+        if (!isKey(s) || !p || p.closest('script, style, noscript, template, [hidden]') || !p.getClientRects().length || getComputedStyle(p).visibility === 'hidden') continue;
+        out.placeholder.push(`raw word key on screen: "${s}" in ${name(p)}`);
+      }
+    }
+    for (const e of document.querySelectorAll('[aria-label], [aria-description]')) for (const a of ['aria-label', 'aria-description']) {
+      const s = (e.getAttribute(a) || '').trim(); if (isKey(s)) out.placeholder.push(`raw word key in ${a}: "${s}" on ${name(e)}`);
+    }
   }
   for (const k of Object.keys(out)) out[k] = [...new Set(out[k])];
   return out;
 };
+
+// Sideways scroll, measured against documentElement.clientWidth. Under isMobile emulation Chrome widens the
+// layout viewport to fit wide content, so innerWidth grows with scrollWidth and can't catch overflow.
+// Returns { sw, cw, wide: [innermost elements whose right edge passes cw + 1, unless an inner scroller clips them] }.
+const SIDEWAYS = () => {
+  const cw = document.documentElement.clientWidth, sw = document.documentElement.scrollWidth;
+  const over = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('[hidden], script, style, noscript, template')) continue;
+    const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+    const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none' || (cs.position === 'fixed' && r.left >= cw)) continue;
+    let right = r.right + scrollX;
+    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(p).overflowX)) right = Math.min(right, p.getBoundingClientRect().right + scrollX);
+    }
+    if (right > cw + 1) over.push(el);
+  }
+  const inner = over.filter((e) => !over.some((o) => o !== e && e.contains(o)));
+  const nm = (e) => (e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.classList.length ? '.' + [...e.classList].slice(0, 2).join('.') : ''));
+  return { sw, cw, wide: [...new Set(inner.map((e) => `${nm(e)} right edge ${Math.round(e.getBoundingClientRect().right + scrollX)}`))].slice(0, 6) };
+};
+const sidewaysIssues = (d, label) => [
+  ...(d.sw > d.cw + 1 ? [`${label}page scrolls sideways: ${d.sw} > ${d.cw}`] : []),
+  ...d.wide.map((x) => `${label}past the screen edge (${d.cw}): ${x}`),
+];
 
 const TEXT_SPACING_CSS = '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important}p{margin-bottom:2em!important}';
 
@@ -177,6 +217,14 @@ async function runAxe(pg) {
 }
 async function focusWalk(pg, max = 80) {
   const bad = [];
+  // A popup left open by an earlier step would cover the first Tab stops. A keyboard user can't reach that
+  // state (Tab closes it), so close it the way a user would: Escape, then blur as a fallback.
+  const OPEN = '[aria-expanded="true"][aria-haspopup="listbox"]';
+  const closed = () => pg.waitForFunction((s) => !document.querySelector(s), OPEN, { timeout: 1500 }).then(() => true, () => false);
+  if (await pg.$(OPEN)) {
+    await pg.keyboard.press('Escape');
+    if (!(await closed())) { await pg.evaluate(() => { const a = document.activeElement; if (a && a.blur) a.blur(); }); if (!(await closed())) bad.push('a listbox popup stays open after Escape and blur'); }
+  }
   await pg.evaluate(() => { window.scrollTo(0, 0); const a = document.activeElement; if (a && a.blur) a.blur(); window.__qaSeen = new WeakSet(); });
   let stops = 0;
   for (let i = 0; i < max; i++) {
@@ -379,7 +427,7 @@ function scenarios(baseUrl) {
           ['#tab=case&state=Maryland&who=federal&src=drone', '#/maryland/case?photo=drone'],
           ['#state=Indiana&who=local', '#/indiana/case'],
           ['#/compare/maryland/montana', '#/maryland'],
-          ['#/laws/bills?state=ohio', '#/ohio'],
+          ['#/laws/bills?state=ohio', '#/ohio?open=bills'],
           ['#/compare/laws/judge', '#/?open=judge'],
           ['#/dc', '#/district-of-columbia'],
           ['#/washington-dc', '#/district-of-columbia'],
@@ -556,8 +604,7 @@ async function runScenario(browser, vp, sc, base, opts) {
     add('axe', await runAxe(pg));
     const res = await pg.evaluate(PAGE_CHECKS, {});
     for (const [k, v] of Object.entries(res)) add(k, v);
-    const d = await pg.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
-    if (d.sw > d.iw + 1) add('reflow', [`page scrolls sideways: ${d.sw} > ${d.iw}`]);
+    add('reflow', sidewaysIssues(await pg.evaluate(SIDEWAYS), ''));
     const mo = await pg.evaluate(() => { const inf = document.getAnimations().filter((a) => { const t = a.effect && a.effect.getComputedTiming && a.effect.getComputedTiming(); return t && t.iterations === Infinity; });
       return inf.length && !document.querySelector('[data-motion-toggle]') ? inf.map((a) => a.animationName || 'animation').slice(0, 3) : []; });
     if (mo.length) add('motion', [`looping animation with no [data-motion-toggle]: ${mo.join(', ')}`]);
@@ -578,8 +625,7 @@ async function runScenario(browser, vp, sc, base, opts) {
       await pg.addStyleTag({ content: TEXT_SPACING_CSS }); await pg.waitForTimeout(250);
       const sp = await pg.evaluate(PAGE_CHECKS, { only: ['clip', 'overlap'] });
       add('spacing', [...sp.clip, ...sp.overlap].map((x) => 'text spacing: ' + x));
-      const d2 = await pg.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
-      if (d2.sw > d2.iw + 1) add('spacing', [`text spacing: page scrolls sideways ${d2.sw} > ${d2.iw}`]);
+      add('spacing', sidewaysIssues(await pg.evaluate(SIDEWAYS), 'text spacing: '));
     }
   } catch (e) {
     add('harness', ['scenario crashed: ' + String(e.message).split('\n')[0].slice(0, 160)]);
@@ -652,5 +698,5 @@ async function main() {
   process.exit(total ? 1 : 0);
 }
 
-module.exports = { PAGE_CHECKS, INIT, TEXT_SPACING_CSS, VIEWPORTS, DATA_RE, waitReady, tryClick, routeData, runAxe, focusWalk, staticGrep, readLive, clone, need, slugOf };
+module.exports = { PAGE_CHECKS, SIDEWAYS, sidewaysIssues, INIT, TEXT_SPACING_CSS, VIEWPORTS, DATA_RE, waitReady, tryClick, routeData, runAxe, focusWalk, staticGrep, readLive, clone, need, slugOf };
 if (require.main === module) main().catch((e) => { console.error(e); console.log('TOTAL ISSUES 1'); process.exit(1); });

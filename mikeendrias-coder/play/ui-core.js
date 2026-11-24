@@ -115,10 +115,25 @@
   function onNav() {
     if (!FV.ready || document.body.classList.contains('is-offline')) return;
     if (location.hash === lastHash) return;
+    // A hash that names an element on the page (#board) is an in-page jump: keep the route and its address.
+    var h = location.hash;
+    if (/^#[A-Za-z][\w-]*$/.test(h) && document.getElementById(h.slice(1))) {
+      try { history.replaceState(null, '', FV.L.hashFor(FV.route) || '#/'); } catch (e) {}
+      lastHash = location.hash;
+      return;
+    }
     var prev = FV.route; fromHash(); render(prev, { pop: true });
   }
   window.addEventListener('popstate', onNav);
   window.addEventListener('hashchange', onNav);
+  // The skip link moves focus to the board without touching the address, so the chosen state stays.
+  document.addEventListener('click', function (e) {
+    var s = e.target.closest && e.target.closest('a.skip'), b = $('board');
+    if (!s || !b) return;
+    e.preventDefault();
+    b.focus({ preventScroll: true });
+    b.scrollIntoView({ block: 'start' });
+  });
 
   /* ---------- render ---------- */
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
@@ -172,6 +187,7 @@
   }
   FV.fillWords = fillWords;
   function start(D) {
+    if (!D || typeof D !== 'object' || Array.isArray(D)) throw new Error('data is not an object'); // copy-lint-ok (developer error, never shown)
     FV.D = D;
     mergeWords(D);
     FV.L = window.FVLogic.create(D);
@@ -197,13 +213,14 @@
   function boot() {
     var p = window.FV_DATA && window.FV_DATA.p;
     if (!p) return fail(new Error('no loader'));
-    p.then(start, fail);
+    // catch, so an error thrown while starting also shows the "Try again" box.
+    p.then(start).catch(fail);
   }
   document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('#retry')) {
       document.body.classList.remove('is-error'); document.body.classList.add('is-loading'); show('load-fail', false);
       FV.retried = true;
-      window.FV_DATA.go().then(start, fail);
+      window.FV_DATA.go().then(start).catch(fail);
     }
   });
 
@@ -442,7 +459,11 @@
         if (r.open && r.view !== 'case' && openRow(r, boot)) return;
         if (boot) {
           // A shared link to a state lands on its panel when the panel sits below the map.
-          if (r.st && stacked) panel.scrollIntoView({ block: 'start' });
+          // Two frames later, so the jump is not scored as a layout shift of the first full render.
+          if (r.st && stacked) {
+            var jump = function () { panel.scrollIntoView({ block: 'start' }); };
+            if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(jump); }); else setTimeout(jump, 0);
+          }
           return;
         }
         // Announcements.
@@ -450,7 +471,9 @@
         else if (r.view === 'case') { if (changed || exNew) FV.say(C.sayCase(r.st, FV.L.computeCase(r.st, r.ctx))); }
         else if (changed) FV.say(C.sayState(r.st));
         // Focus and scroll.
-        var o = info.origin, lost = !document.activeElement || document.activeElement === document.body;
+        // Focus left inside a section that was just hidden counts as lost (the browser moves it to body later).
+        var ae = document.activeElement;
+        var o = info.origin, lost = !ae || ae === document.body || ae.isConnected === false || !!(ae.closest && ae.closest('[hidden]'));
         if (o === 'pop' || (!changed && !exNew)) { if (lost && info.hadPanelFocus) focusTitle(); return; }
         if (o === 'tile' || o === 'dd') {
           if (stacked && r.st) toPanel();

@@ -164,9 +164,13 @@
       if (g === 'ban') { const law = banOf(state); return w(banKey(isPause(law) ? 'tile.pause' : 'tile.ban', law), sv(state, kindVars(law))); }
       return plural('tile.rules', protCount(state), v);
     }
-    // Legend chips in display order, with live counts.
+    // States with a map tile. An extra place (no L.ABBR / L.POS tile) sits in the dropdown only, so the legend
+    // and the no-law count leave it out. L.counts keeps every place (app.js parity).
+    const hasTile = s => !L.ABBR || !L.POS || !!(L.ABBR[s] && L.POS[L.ABBR[s]]);
+    const tileStates = () => arr(states()).filter(hasTile);
+    // Legend chips in display order, with live counts (tiles only).
     function legend() {
-      const n = {}; states().forEach(s => { const t = mapLevel(s); n[t] = (n[t] || 0) + 1; });
+      const n = {}; tileStates().forEach(s => { const t = mapLevel(s); n[t] = (n[t] || 0) + 1; });
       return ['l4', 'l3', 'l2', 'l1', 'lb', 'lz', 'l0'].map(tier => {
         const label = w('map.legend.' + tier);
         return { tier, label, n: n[tier] || 0, aria: w('map.legend.aria', { label, n: n[tier] || 0 }) };
@@ -231,7 +235,10 @@
     function rowNo(state, rule) {
       if (stateProt(state, rule).level !== 'no') return '';
       if (groupOf(state) !== 'ban') return w('row.no', sv(state));
-      return w('row.no.ban', sv(state, kindVars(banOf(state))));
+      // A ban with exceptions (its own except text, or laws that carve out exceptions) says so.
+      const law = banOf(state), b = (law && law.ban) || {};
+      const exc = str(b.except).trim() || arr(otherLawsOf(state)).some(l => l.banException);
+      return w(exc && has('row.no.banExcept') ? 'row.no.banExcept' : 'row.no.ban', sv(state, kindVars(law)));
     }
     // One bill note. Bills still alive read "would add this"; bills whose session is over (pending false)
     // read "tried to add this … did not become law". A note that mixes both gives two sentences.
@@ -332,8 +339,10 @@
     function billImpactChips(b) {
       const list = arr(billImpact(b));
       if (!list.length) return [{ kind: 'none', sym: '', text: w('impact.none'), aria: w('impact.none') }];
-      const order = ['loose', 'add', 'up', 'same', 'have'], SYM = { add: '+', up: '↑', same: '=', have: '=', loose: '!' };
-      return list.slice().sort((a, c) => order.indexOf(a.kind) - order.indexOf(c.kind)).map(x => {
+      const order = ['loose', 'add', 'addPart', 'up', 'same', 'have'], SYM = { add: '+', addPart: '+', up: '↑', same: '=', have: '=', loose: '!' };
+      // A bill that adds a protection with a limit adds only part of it (same rule as L.billNote's addPart).
+      const kindOf = x => (x.kind === 'add' && x.limit ? 'addPart' : x.kind);
+      return list.map(x => Object.assign({}, x, { kind: kindOf(x) })).sort((a, c) => order.indexOf(a.kind) - order.indexOf(c.kind)).map(x => {
         const kind = w('impact.' + x.kind), name = protName(x.rule);
         return { kind: x.kind, rule: x.rule, sym: SYM[x.kind] || '', label: kind, text: name, aria: w('impact.aria', { kind, name }) };
       });
@@ -534,8 +543,17 @@
     }
     // "Why this step matters" (config.why, legacy Step notes). '' for the result step.
     const stepWhy = key => w('why.' + key);
-    // The scorecard row a step's "See the law" link opens (PSLUG of its first rule), or ''.
-    const stepOpen = step => { const r = step && arr(step.checks)[0] && step.checks[0][0]; return r && L.PSLUG ? str(L.PSLUG[r]) : ''; };
+    // The rule a step's "See the law" link opens. With the case c (and ctx): the rule that stopped the search here,
+    // else the first rule that applies to this case. Without c, or when every rule is n/a: the step's first rule.
+    function stepOpenRule(step, c, ctx) {
+      const first = step && arr(step.checks)[0] && step.checks[0][0];
+      if (!step || !c) return first ? str(first) : '';
+      const rs = arr(step.results);
+      const hit = rs.find(r => isStopLine(c, step, r)) || rs.find(r => lineStatus(r, c, ctx).status !== 'na');
+      return hit && hit.rule ? str(hit.rule) : first ? str(first) : '';
+    }
+    // The scorecard row slug (PSLUG) for that rule, or ''.
+    const stepOpen = (step, c, ctx) => { const r = stepOpenRule(step, c, ctx); return r && L.PSLUG ? str(L.PSLUG[r] || '') : ''; };
     function stepAria(state, c, step, ctx) {
       const t = stepTag(stepAgg(c, step, ctx));
       const v = { n: stepNo(c, step), total: arr(c && c.steps).length || 6, title: stepTitle(step && step.key), status: t ? t.text : '' };
@@ -562,12 +580,13 @@
         const why = c.why || {};
         const v = sv(state, Object.assign({ n: c.stopAt + 1, step: stepShort(key) }, why.kind === 'ban' ? kindVars(why.law) : {}));
         const head = why.kind === 'ban' ? w(c.stopAt === 0 ? 'result.stopLine.banStart' : 'result.stopLine.ban', v) : w('result.stopLine', v);
-        return why.text ? head + ' ' + str(why.text) : head;
+        // A bar's full text already sits on the step line, so the result gives only the head. Ban text stays.
+        return why.text && why.kind !== 'bar' ? head + ' ' + str(why.text) : head;
       }
       const t = tallyOf(c, ctx);
       const head = w(otherOnCase(state, ctx) ? 'result.throughOther' : 'result.throughLine', sv(state));
       const tail = !t.total ? w('result.noneApply')
-        : t.got ? w('result.got', t) : t.soft ? w('result.soft', t) : w('result.noneCovered', t);
+        : plural(t.got ? 'result.got' : t.soft ? 'result.soft' : 'result.noneCovered', t.total, t);
       return head + ' ' + tail;
     }
     // tallyLabels(t, c?, ctx?). Pass c: the tally is then worked out from the case (tallyOf), and a search a ban
@@ -585,8 +604,8 @@
           { key: 'soft', n: x.soft || 0, label: w('tally.soft') },
           { key: 'no', n: no, label: w('tally.no') }
         ],
-        of: w('tally.of', { total: x.total || 0 }),
-        aria: w('tally.aria', { got: x.got || 0, soft: x.soft || 0, no, total: x.total || 0 })
+        of: plural('tally.of', x.total || 0, { total: x.total || 0 }),
+        aria: plural('tally.aria', x.total || 0, { got: x.got || 0, soft: x.soft || 0, no, total: x.total || 0 })
       };
     }
 
@@ -637,7 +656,9 @@
       return { heading: w('offline.heading'), message: w('offline.message'), linkText: url ? w('offline.linkText') : '', linkUrl: url };
     }
     const previewBar = iso => w('pv.bar', { date: dateText(iso) });
-    const riskLines = () => ['risk.line1', 'risk.line2', 'risk.line3'].map(k => w(k, { n: (L.counts || {}).none || 0 })).filter(Boolean);
+    // {n} = places on the map with no law (tiles only); L.counts.none when there is no state list.
+    const noLawCount = () => (arr(states()).length ? tileStates().filter(s => groupOf(s) === 'none').length : (L.counts || {}).none || 0);
+    const riskLines = () => ['risk.line1', 'risk.line2', 'risk.line3'].map(k => w(k, { n: noLawCount() })).filter(Boolean);
     const sayState = state => w('say.score', { label: tileLabel(state) });
     const sayCase = (state, c) => w('say.case', sv(state, { result: resultStamp(c) }));
 
@@ -652,7 +673,7 @@
       billsHeading, billsNone, billLine, billImpactChips, billCard, billStepText,
       // case
       controls, question, banGapNote, noLawNote, zeroLawNote, caseNote,
-      stepTag, stepAgg, lineStatus, tallyOf, stepHead, stepLines, stepWhy, stepOpen, stepAria, resultStamp, resultSentence, tallyLabels,
+      stepTag, stepAgg, lineStatus, tallyOf, stepHead, stepLines, stepWhy, stepOpen, stepOpenRule, stepAria, resultStamp, resultSentence, tallyLabels,
       exampleOutcome, exampleCard, lessonCallout,
       // page
       glossary, footer, staleLine, offline, previewBar, riskLines, sayState, sayCase
