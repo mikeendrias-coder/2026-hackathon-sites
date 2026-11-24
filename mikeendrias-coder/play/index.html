@@ -7,10 +7,10 @@
 <title>Face Value (draft): police face recognition laws by state</title>
 <meta name="description" content="Draft. Pick a state to see which of 7 common protections its laws give people against police face recognition.">
 <link rel="icon" href="icons/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="house.css?v=1">
-<link rel="stylesheet" href="styles.css?v=1">
-<link rel="stylesheet" href="score.css?v=1">
-<link rel="stylesheet" href="case.css?v=1">
+<link rel="stylesheet" href="house.css?v=2">
+<link rel="stylesheet" href="styles.css?v=2">
+<link rel="stylesheet" href="score.css?v=2">
+<link rel="stylesheet" href="case.css?v=2">
 <script>
 /* Start loading the law data right away. Add ?preview to see the Sheet's latest preview. */
 (function () {
@@ -32,14 +32,14 @@
   window.FV_DATA.go();
 })();
 </script>
-<script defer src="words.js?v=1"></script>
-<script defer src="kit.js?v=1"></script>
-<script defer src="logic.js?v=1"></script>
-<script defer src="copy.js?v=1"></script>
-<script defer src="dropdown.js?v=1"></script>
-<script defer src="ui-core.js?v=1"></script>
-<script defer src="ui-score.js?v=1"></script>
-<script defer src="ui-case.js?v=1"></script>
+<script defer src="words.js?v=2"></script>
+<script defer src="kit.js?v=2"></script>
+<script defer src="logic.js?v=2"></script>
+<script defer src="copy.js?v=2"></script>
+<script defer src="dropdown.js?v=2"></script>
+<script defer src="ui-core.js?v=2"></script>
+<script defer src="ui-score.js?v=2"></script>
+<script defer src="ui-case.js?v=2"></script>
 </head>
 <body class="is-loading">
 <a class="skip lnk" href="#board" data-w="site.skip">Skip to the map</a>
@@ -62,7 +62,7 @@
   <aside class="box soft" id="risk" aria-labelledby="risk-h">
     <div class="risk-scene" aria-hidden="true">
       <img class="px rs-cam" src="icons/src-cctv.svg" width="48" height="48" alt="">
-      <span class="rs-beam"></span>
+      <span class="rs-beam"><svg width="100%" height="100%" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><line x1="100%" y1="0" x2="0" y2="100%" stroke="currentColor" stroke-width="2"/></svg></span>
       <span class="rs-scan"></span>
       <img class="px rs-who" src="icons/who-local.svg" width="56" height="56" alt="">
       <span class="rs-ground"></span>
@@ -89,7 +89,7 @@
   <section id="map" aria-labelledby="map-h">
     <h2 id="map-h" data-w="map.heading">Pick your state</h2>
     <div class="map-pick">
-      <button class="dd" id="state-dd" type="button" aria-haspopup="listbox" aria-expanded="false" aria-disabled="true"><span class="dd-txt"><span class="dd-k" data-w="map.ddLabel">State</span><span class="dd-val" data-w="map.ddPlaceholder">Choose a state</span></span><svg class="chev" viewBox="0 0 8 8" width="12" height="12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M1 2h2v1h1v1h1V3h1V2h1v2H6v1H5v1H3V5H2V4H1z" fill="currentColor"/></svg></button>
+      <button class="dd" id="state-dd" type="button" aria-haspopup="listbox" aria-expanded="false" aria-disabled="true"><span class="dd-txt"><span class="dd-k" data-w="map.ddLabel">State</span><span class="sr-only">: </span><span class="dd-val" data-w="map.ddPlaceholder">Choose a state</span></span><svg class="chev" viewBox="0 0 8 8" width="12" height="12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M1 2h2v1h1v1h1V3h1V2h1v2H6v1H5v1H3V5H2V4H1z" fill="currentColor"/></svg></button>
     </div>
     <div id="tiles" role="group" aria-labelledby="map-h"><p class="loading" data-w="map.loading">Loading the map…</p></div>
     <ul id="legend"></ul>

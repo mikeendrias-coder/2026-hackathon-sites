@@ -378,20 +378,12 @@
         '<a class="lnk" href="../">' + esc(f.live) + '</a>';
       var gloss = C.glossary();
       var body = '<dl class="gloss">' + gloss.map(function (g) { return '<div><dt>' + esc(g.term) + '</dt><dd>' + esc(g.def) + '</dd></div>'; }).join('') + '</dl>';
-      // The closed box shows its terms (desktop only, styles.css), so it holds real words beside the left column.
-      var peek = '<ul class="gloss-peek" aria-hidden="true">' + gloss.map(function (g) { return '<li>' + esc(g.term) + '</li>'; }).join('') + '</ul>';
       document.querySelector('#foot .foot-in').innerHTML =
         '<div class="foot-main">' + p('foot-base', f.baseline) + p('foot-stale', stale) +
         '<div class="foot-meta">' + p('foot-src', f.source) + p('foot-upd', f.updated) + p('foot-disc', f.disclaimer) + p('foot-lk', f.links) + p('foot-by', f.by) + '</div>' +
         '<div class="foot-links">' + links + '</div></div>' +
-        (gloss.length ? FV.h.acc({ id: 'gloss', cls: 'foot-gloss', level: 2, head: '<span>' + esc(f.glossaryHeading) + '</span>', body: body, after: peek }) : '');
+        (gloss.length ? FV.h.acc({ id: 'gloss', cls: 'foot-gloss', level: 2, head: '<span>' + esc(f.glossaryHeading) + '</span>', body: body }) : '');
     }
-
-    // A click on the term preview opens the glossary, as the button does.
-    document.addEventListener('click', function (e) {
-      var pk = e.target.closest && e.target.closest('.gloss-peek'), b = $('gloss-b');
-      if (pk && b) { FV.accToggle(b, true); b.focus({ preventScroll: true }); }
-    });
 
     /* ---- preview bar ---- */
     function previewHref() { return location.pathname + (location.hash && location.hash !== '#/' ? location.hash : ''); }
@@ -412,6 +404,11 @@
       var r = t.getBoundingClientRect();
       if (r.top < 0 || r.bottom > innerHeight) t.scrollIntoView({ block: 'nearest' });
     }
+    /* True when #panel is its own scroll box (the sticky panel at 1024 and wider). */
+    function panelScrolls() {
+      var p = $('panel');
+      return !!p && p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY);
+    }
     /* Back and Forward: the browser restores the old scroll position right after popstate.
        Focus now so it is never lost, then check the spot once the restore is done. */
     function popFocus(r, left) {
@@ -419,12 +416,24 @@
       var t = a || title(); if (!t) return;
       if (!a && !t.hasAttribute('tabindex')) t.setAttribute('tabindex', '-1');
       t.focus({ preventScroll: true });
+      // The box that clips it: the sticky panel when the panel scrolls, else the screen. 16px spare keeps the ring in view.
+      var M = 16, panel = $('panel');
       var fix = function () {
         if (document.activeElement !== t) return;
-        var b = t.getBoundingClientRect();
-        if (b.top < 0 || b.bottom > innerHeight) t.scrollIntoView({ block: 'nearest' });
+        var b = t.getBoundingClientRect(), top = 0, bot = innerHeight, sc = panelScrolls();
+        if (sc) { var p = panel.getBoundingClientRect(); top = Math.max(top, p.top); bot = Math.min(bot, p.bottom); }
+        if (b.top >= top + M && b.bottom <= bot - M) return;
+        // A link goes to the middle of the box; a heading goes near the top, so the content under it shows.
+        if (sc) {
+          panel.scrollTop += b.top - (a ? (top + bot - b.height) / 2 : top + M);
+          b = t.getBoundingClientRect(); if (b.top >= M && b.bottom <= innerHeight - M) return;
+        }
+        // The page itself scrolls (stacked layout), or the panel sits partly off screen.
+        window.scrollBy(0, b.top - (a ? (innerHeight - b.height) / 2 : M));
       };
+      // Check again once the panel swap (160ms) and the scroll restore are over; the swap shifts the box by 6px while it runs.
       if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(fix); }); else setTimeout(fix, 0);
+      setTimeout(fix, 250);
     }
     function toPanel() {
       $('panel').scrollIntoView({ behavior: smooth(), block: 'start' });
@@ -439,8 +448,10 @@
     }
     function openRow(r, boot) {
       var key = r.open === 'bills' ? null : FV.L.protBySlug(r.open);
-      var acc = key ? document.querySelector('#panel .sc-row[data-rule="' + key + '"], #panel .ov-row[data-rule="' + key + '"]')
-        : document.querySelector('#panel .sc-bills');
+      // Look only in the view on show: the hidden overview keeps its rows, and they come first in the page.
+      var view = $(r.view === 'overview' ? 'pn-overview' : 'pn-score'); if (!view) return false;
+      var acc = key ? view.querySelector('.sc-row[data-rule="' + key + '"], .ov-row[data-rule="' + key + '"]')
+        : view.querySelector('.sc-bills');
       var btn = acc && acc.querySelector('.acc-b'); if (!btn) return false;
       FV.accToggle(btn, true);
       btn.focus({ preventScroll: true });

@@ -20,7 +20,9 @@
   function quotesFor(state, name, rule) {
     var all = Array.isArray(D().quotes) ? D().quotes : [], out = [];
     all.forEach(function (q, i) {
-      if (q && q.state === state && q.item === name && q.kind !== 'Bill' && (rule == null || String(q.rule) === String(rule))) out.push({ q: q, i: i });
+      // A quote with no words is skipped; an item left with none falls through to the sc-noq line.
+      if (q && q.state === state && q.item === name && q.kind !== 'Bill' && String(q.text || '').trim() &&
+        (rule == null || String(q.rule) === String(rule))) out.push({ q: q, i: i });
     });
     var lead = rule != null && D().config && D().config.leadQuotes;
     var li = lead ? lead[state + '|' + name + '|' + rule] : null;
@@ -60,9 +62,9 @@
     if (card.note) body += p('sc-note', esc(card.note));
     return '<div class="sc-law">' +
       '<h4 class="sc-law-name">' + esc(card.name) + '</h4>' +
-      '<p class="sc-meta"><span>' + esc(card.meta) + '</span>' + tag(card.unclear) + '</p>' +
+      (card.meta || card.unclear ? '<p class="sc-meta"><span>' + esc(card.meta) + '</span>' + tag(card.unclear) + '</p>' : '') +
       body +
-      p('sc-cite', '<span class="sc-label">' + esc(card.citeLabel) + '</span> ' + esc(card.cite)) +
+      (card.cite ? p('sc-cite', '<span class="sc-label">' + esc(card.citeLabel) + '</span> ' + esc(card.cite)) : '') +
       readLink(card) + '</div>';
   }
   // A labelled list of state chips; each chip opens that state's scorecard.
@@ -140,7 +142,7 @@
       '<div class="sc-ban-law"><h4 class="sc-law-name">' + esc(b.name) + '</h4>' +
       '<p class="sc-meta"><span>' + esc(b.meta) + '</span></p>' +
       (banQ.length ? banQ.map(quoteHTML).join('') : p('sc-noq', esc(b.noQuote))) +
-      p('sc-cite', '<span class="sc-label">' + esc(b.citeLabel) + '</span> ' + esc(b.cite)) + readLink(b) + '</div>' +
+      (b.cite ? p('sc-cite', '<span class="sc-label">' + esc(b.citeLabel) + '</span> ' + esc(b.cite)) : '') + readLink(b) + '</div>' +
       (b.exceptions && b.exceptions.length ? '<div class="sc-exc"><p class="sc-label sc-exc-h">' + esc(b.exceptionsHeading) + '</p>' +
         b.exceptions.map(function (card, i) { return lawHTML(st, exc[i] || {}, card, { does: true }); }).join('') + '</div>' : '') +
       '</div>';

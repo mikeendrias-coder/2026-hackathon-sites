@@ -540,9 +540,63 @@ async function keyboardScript(ctx, base) {
       if (!b.v || /\/case/.test(b.h)) return `Enter on "score" gave visible=${b.v} hash=${b.h}`;
       return null;
     });
+    // Back and Forward: focus comes back to the link or title, fully inside its scroll box with room for the ring.
+    // Two frames, a short delay for late fixes, then wait until the page and #panel stop scrolling.
+    const settle = () => pg.evaluate(() => new Promise((res) => {
+      const p = document.getElementById('panel'); const pos = () => scrollX + ',' + scrollY + ',' + (p ? p.scrollTop : 0);
+      let last = pos(), still = 0, n = 0;
+      const tick = () => { const now = pos(); still = now === last ? still + 1 : 0; last = now; if (still >= 5 || ++n > 150) res(); else requestAnimationFrame(tick); };
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { last = pos(); requestAnimationFrame(tick); }, 400)));
+    }));
+    const fits = async (label, want) => { await settle(); const m = await pg.evaluate(FOCUS_FITS, want); if (m) f.push(`history ${label}: ${m}`); };
+    const seeLaw = async (where, pickLast) => {
+      const law = pg.locator('#panel a.cs-law[data-open]'); const n = await law.count();
+      if (!n) { f.push(`history: no "See the law" link in ${where}`); return null; }
+      const a = law.nth(pickLast ? n - 1 : Math.min(3, n - 1)); const slug = await a.getAttribute('data-open');
+      await a.focus(); await pg.keyboard.press('Enter'); await settle();
+      const h = await pg.evaluate(() => location.hash);
+      if (!h.includes('open=' + slug)) { f.push(`history: Enter on "See the law" in ${where} gave hash ${h}`); return null; }
+      return `#panel a.cs-law[data-open="${slug}"]`;
+    };
+    await pg.goto('about:blank'); await pg.goto(base + '#/'); await waitReady(pg);
+    await step('history', async () => {
+      await pg.locator('#tiles .tile[data-st="Indiana"]').focus(); await pg.keyboard.press('Enter'); await settle();
+      await pg.locator('#view-switch [data-view="case"]').focus(); await pg.keyboard.press('Enter'); await settle();
+      const LAW = await seeLaw('the Indiana case'); if (!LAW) return null;
+      const ROW = '#pn-title, #panel .sc-row .acc-b[aria-expanded="true"]';
+      await pg.goBack(); await fits('Indiana Back', LAW);
+      await pg.goForward(); await fits('Indiana Forward', ROW);
+      await pg.goBack(); await fits('Indiana Back again', LAW);
+      await pg.goBack(); await fits('Indiana Back to the scorecard', '#pn-title');
+      await pg.goBack(); await fits('Indiana Back to the overview', '#ov-title');
+      await pg.goto('about:blank'); await pg.goto(base + '#/'); await waitReady(pg);
+      const ex = pg.locator('#examples .ex-card[data-ex^="montana"]'); if (!(await ex.count())) return 'no Montana example card';
+      await ex.focus(); await pg.keyboard.press('Enter'); await settle();
+      const MT = await seeLaw('the Montana example', true); if (!MT) return null;
+      await pg.goBack(); await fits('Montana Back', MT);
+      return null;
+    });
   } finally { await pg.close(); }
   return f;
 }
+// In the page: the focused element matches `want`, and its box plus 6px for the ring sits inside the screen
+// and inside #panel when #panel is the scroller (overflow-y auto at 1024 and wider).
+const FOCUS_FITS = (want) => {
+  const a = document.activeElement, R = Math.round;
+  const name = !a || a === document.body ? 'body' : (a.id ? '#' + a.id : a.tagName.toLowerCase() + '.' + [...a.classList].join('.')) + (a.getAttribute('data-open') ? `[data-open=${a.getAttribute('data-open')}]` : '');
+  if (!a || !a.matches(want)) return `focus is on ${name} at ${location.hash}, want ${want}`;
+  const r = a.getBoundingClientRect(), m = 6;
+  let box = { top: 0, bottom: innerHeight, left: 0, right: innerWidth }, by = 'the screen';
+  const p = document.getElementById('panel');
+  if (p && p.contains(a) && getComputedStyle(p).overflowY === 'auto') {
+    const q = p.getBoundingClientRect(); by = '#panel';
+    box = { top: Math.max(0, q.top), bottom: Math.min(innerHeight, q.bottom), left: Math.max(0, q.left), right: Math.min(innerWidth, q.right) };
+  }
+  const tol = 0.5;
+  if (r.top - m < box.top - tol || r.bottom + m > box.bottom + tol || r.left - m < box.left - tol || r.right + m > box.right + tol)
+    return `${name} at y ${R(r.top)}-${R(r.bottom)} x ${R(r.left)}-${R(r.right)} is cut off by ${by} (y ${R(box.top)}-${R(box.bottom)} x ${R(box.left)}-${R(box.right)}) once 6px of ring is added`;
+  return null;
+};
 
 async function motionPass(browser, vp, base) {
   const f = [];

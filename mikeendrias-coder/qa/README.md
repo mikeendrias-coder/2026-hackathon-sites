@@ -42,6 +42,8 @@ NODE_PATH=/home/michael/work/node_modules node qa/check-defaults.cjs \
 **play-qa.cjs.** Options: `--url` (default `http://127.0.0.1:8765/play/`), `--vp 390,1440`, `--only <ids>`, `--shots`.
 Sizes: 320×640, 390×844 and 768×1024 as touch phones and tablets; 1024×768, 1280×720 and 1440×900 as desktops.
 Scenario ids: overview, maryland, vermont, virginia-state, indiana-case, illinois-drone, montana-shoplifting, kentucky, ohio, dc, example, offline, preview, data-404, old-links, dropdown. Extra passes: keyboard, motion.
+The keyboard pass covers tiles, the dropdown, accordions, the view switch and Back/Forward. For Back/Forward it follows "See the law" in the Indiana case and the Montana example.
+After each Back or Forward, focus must be on the link, the open row or the title, with 6px to spare inside the screen and inside `#panel` when `#panel` scrolls.
 Each scenario checks its own content through the DOM contract (contract.md §7), then runs every page check:
 
 1. DOM contract basics: lang, noindex, "(draft)" title, body state classes, header, board cells in order, 51 tiles, one tile in the Tab order

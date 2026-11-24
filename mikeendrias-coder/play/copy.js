@@ -144,7 +144,11 @@
     const catchSentence = list => { const ps = arr(list).map(catchPhrase).filter(Boolean); return ps.length ? w('row.catch', { limits: join(ps) }) : ''; };
     const lawStatusText = law => { const s = str(law && law.status).replace(/\s*\(.*$/, ''); return w('lawStatus.' + slug(s)) || s; };
     const stepShort = key => w('step.' + key + '.short') || str(key);
-    const stepTitle = key => w('step.' + key + '.title') || str(key);
+    // With the case and the step: a ban or pause that stops the search at this step uses the step's ".ban" title
+    // when it has one ("Can police use it at all?"). With only the key, the plain title.
+    // A step where a ban or pause acts (it stopped the search, or it may cover these police: Virginia state police) gets the ban title.
+    const stepTitle = (key, c, step, state, ctx) => (c && step && ((step.agg === 'stop' && c.why && c.why.kind === 'ban') || (state && gapUnclear(state, c, step, ctx))) && w('step.' + key + '.title.ban'))
+      || w('step.' + key + '.title') || str(key);
     // A law's research flag covers this rule: its reviewRules when given, else every rule it adds (same test as L.stateProt).
     const flagFor = (law, rule) => !!law && !!law.review &&
       arr(Array.isArray(law.reviewRules) ? law.reviewRules : law.rules).map(String).includes(String(rule));
@@ -289,10 +293,12 @@
     // rules (reviewRules []) is a note on a part we did not count, so it shows as that plain note.
     function lawCard(law, rule) {
       const l = law || {}, link = safeUrl(l.link);
+      // Status and year joined only when both are there, so a blank one leaves no lone separator.
+      const st = lawStatusText(l), yr = str(l.year).trim();
       const flag = rule ? flagFor(l, rule) : !!l.review;
       const leftOut = !!rule && !!l.review && Array.isArray(l.reviewRules) && !l.reviewRules.length && !!l.reviewNote;
       return {
-        name: str(l.name), meta: w('law.meta', { status: lawStatusText(l), year: str(l.year) }), status: lawStatusText(l),
+        name: str(l.name), meta: st && yr ? w('law.meta', { status: st, year: yr }) : st || yr, status: st,
         does: str(l.does), note: str(l.note),
         catchText: rule ? catchSentence(limitsOf(l, rule)) : '',
         unclear: flag ? { cls: 't-unclear', text: w('tag.unclear') } : null,
@@ -300,7 +306,7 @@
         whyLabel: leftOut ? w('law.leftOut') : '', why: leftOut ? str(l.reviewNote) : '',
         citeLabel: w('law.cite'), cite: str(l.cite),
         link, linkText: link ? w('law.readLaw') : '', linkAria: link ? w('law.readLawAria', { name: str(l.name) }) + ' ' + w('a11y.newTab') : '',
-        noQuote: w('law.noQuote')
+        noQuote: w(link ? 'law.noQuote' : 'law.noQuote.noLink')
       };
     }
     function banCard(state) {
@@ -329,7 +335,7 @@
       const laws = otherLawsOf(state).filter(l => !l.banException || groupOf(state) !== 'ban');
       if (!laws.length) return null;
       return {
-        heading: plural('other.heading', laws.length, sv(state)), intro: w('other.intro'),
+        heading: plural('other.heading', laws.length, sv(state)), intro: plural('other.intro', laws.length),
         laws: laws.map(notCountedCard)
       };
     }
@@ -440,11 +446,20 @@
       if (win.length && win.every(h => flagFor(h.law, r.rule))) return { status: 'review', limit, base: st, flag: win[0].law };
       return { status: st, limit, base: st, flag: null };
     }
+    // A ban flagged for review that may not cover these police (Virginia, state police): the law, at step 1 only.
+    function gapUnclear(state, c, step, ctx) {
+      if (!state || !step || stepNo(c, step) !== 1) return null;
+      const law = banGap(state, ctx);
+      return law && law.review ? law : null;
+    }
     // The step's agg after the fix above. Same rules as logic.computeCase; unchanged when no line changed.
-    function stepAgg(c, step, ctx) {
+    // With the state (optional), step 1 of a flagged ban-gap case reads 'review', since the ban may still cover
+    // these police. Its lines, the later steps and the tally stay as logic.js gives them.
+    function stepAgg(c, step, ctx, state) {
       if (!step) return '';
       const a = step.agg;
       if (step.key === 'trial' || a === 'stop' || a === 'skip' || a === 'none') return a;
+      if (gapUnclear(state, c, step, ctx)) return 'review';
       const rs = arr(step.results);
       if (!rs.some(r => lineStatus(r, c, ctx).status !== r.status)) return a;
       const st = rs.map(r => lineStatus(r, c, ctx).status).filter(x => x !== 'na');
@@ -477,7 +492,7 @@
       if (!step) return '';
       if (step.key === 'trial') return resultStamp(c);
       const v = sv(state);
-      switch (stepAgg(c, step, ctx)) {
+      switch (stepAgg(c, step, ctx, state)) {
         case 'skip': return w('never');
         case 'stop': {
           const why = (c && c.why) || {};
@@ -491,7 +506,12 @@
           return w('head.mixed', sv(state, { have: live.filter(x => x === 'covered' || x === 'would').length, total: live.length }));
         }
         case 'partial': return w('head.partial', v);
-        case 'review': return w('head.review') + ' ' + w('row.unsettled');
+        case 'review': {
+          const gap = gapUnclear(state, c, step, ctx);
+          if (gap) return w('head.banGap.unclear', sv(state, Object.assign(kindVars(gap), { who: qPolice(state, (ctx || {}).who) })));
+          const n = stepSeen(c, step, ctx);
+          return n ? w('head.unclearSame', { n }) : w('head.review') + ' ' + w('row.unsettled');
+        }
         case 'bypassed': return w('head.bypassed', v);
         default: return w('head.gap', v);
       }
@@ -507,12 +527,41 @@
       if (top && top.reason) return str(top.reason);
       return w('catch.lineupArrest');
     }
+    // A step's results in the order its lines show: the line that stopped the search first.
+    function shownResults(c, step) {
+      const rs = arr(step && step.results).slice();
+      const i = rs.findIndex(r => isStopLine(c, step, r));
+      if (i > 0) rs.unshift(rs.splice(i, 1)[0]);
+      return rs;
+    }
+    // A flagged line whose law's research note already showed on an earlier line of this case:
+    // {n: that step's number, same: true when it is this step}. null for the first showing or an unflagged line.
+    function flagShown(c, step, r, ctx) {
+      const law = lineStatus(r, c, ctx).flag; if (!law) return null;
+      for (const s of arr(c && c.steps)) {
+        if (s.agg === 'skip' || s.key === 'trial' || (s.agg === 'stop' && banStop(c))) continue;
+        for (const x of shownResults(c, s)) {
+          if (s === step && x === r) return null;
+          if (sameLaw(lineStatus(x, c, ctx).flag, law)) return { n: stepNo(c, s), same: s === step };
+        }
+      }
+      return null;
+    }
+    // When every Unclear line in this step rests on a law already explained at an earlier step: that step's number, else 0.
+    function stepSeen(c, step, ctx) {
+      const ns = arr(step && step.results).filter(r => lineStatus(r, c, ctx).status === 'review')
+        .map(r => { const f = flagShown(c, step, r, ctx); return f && !f.same ? f.n : 0; });
+      return ns.length && ns.every(Boolean) ? Math.min(...ns) : 0;
+    }
     // A line resting on a flagged law adds the research note, and the unsettled sentence when the step head lacks it.
+    // The note shows once per case: a later line on the same law points back to the step that explained it.
     function lineText(state, c, step, r, ctx) {
       const base = baseLineText(state, c, step, r, ctx), ls = lineStatus(r, c, ctx);
       if (!ls.flag) return base;
-      const note = str(ls.flag.reviewNote).trim();
-      return [base, stepAgg(c, step, ctx) === 'review' ? '' : w('row.unsettled'), note ? w('row.unclearWhy') + ' ' + note : '']
+      const review = stepAgg(c, step, ctx) === 'review', seen = flagShown(c, step, r, ctx);
+      if (seen && !seen.same) return review && stepSeen(c, step, ctx) ? base : base + ' ' + w('head.unclearSame', { n: seen.n });
+      const note = seen ? '' : str(ls.flag.reviewNote).trim();
+      return [base, review ? '' : w('row.unsettled'), note ? w('row.unclearWhy') + ' ' + note : '']
         .filter(Boolean).join(' ');
     }
     function baseLineText(state, c, step, r, ctx) {
@@ -553,9 +602,8 @@
         return [{ kind: 'ban', rule: null, at: null, label: kindVars(law).Kind, tag: stepTag('stop'),
           text: w('line.stop', { text: [str(c.why.text), str(b.except)].filter(Boolean).join(' ') }), law }];
       }
-      const rs = arr(step.results).slice();
-      const stopIdx = rs.findIndex(r => isStopLine(c, step, r));
-      if (stopIdx > 0) rs.unshift(rs.splice(stopIdx, 1)[0]);
+      const rs = shownResults(c, step);
+      const stopIdx = rs.length && isStopLine(c, step, rs[0]) ? 0 : -1;
       const mk = r => {
         const stop = isStopLine(c, step, r);
         return {
@@ -590,8 +638,8 @@
     // The scorecard row slug (PSLUG) for that rule, or ''.
     const stepOpen = (step, c, ctx) => { const r = stepOpenRule(step, c, ctx); return r && L.PSLUG ? str(L.PSLUG[r] || '') : ''; };
     function stepAria(state, c, step, ctx) {
-      const t = stepTag(stepAgg(c, step, ctx));
-      const v = { n: stepNo(c, step), total: arr(c && c.steps).length || 6, title: stepTitle(step && step.key), status: t ? t.text : '' };
+      const t = stepTag(stepAgg(c, step, ctx, state));
+      const v = { n: stepNo(c, step), total: arr(c && c.steps).length || 6, title: stepTitle(step && step.key, c, step, state, ctx), status: t ? t.text : '' };
       return w(t ? 'step.aria' : 'step.ariaPlain', v);
     }
 

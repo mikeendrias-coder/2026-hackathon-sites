@@ -78,10 +78,22 @@
       '<span class="cs-line-l">' + esc(label) + '</span>' + tagHtml(l.tag) +
       (gap || !l.text ? '' : '<p class="cs-line-t">' + esc(l.text) + '</p>') + '</li>';
   }
+  // A one-rule line that repeats the step answer shows only what it adds (the reason), so no sentence appears twice.
+  function afterHead(text, head) {
+    var t = String(text || ''), hd = String(head || '').replace(/[.\s]+$/, '');
+    var dot = hd.indexOf('. ');
+    var keys = [hd, dot > 0 ? hd.slice(dot + 2) : ''];
+    for (var k = 0; k < keys.length; k++) {
+      if (!keys[k] || t.indexOf(keys[k]) !== 0) continue;
+      var rest = t.slice(keys[k].length).replace(/^[\s.:;,]+/, '');
+      return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : '';
+    }
+    return t;
+  }
   function stepHtml(st, c, s, i, ctx) {
     var C = FV.C, L = FV.L;
     var trial = s.key === 'trial';
-    var agg = C.stepAgg(c, s, ctx);
+    var agg = C.stepAgg(c, s, ctx, st); // st lets copy flag a ban-gap step as Unclear (Virginia state police)
     var tag = trial ? null : C.stepTag(agg);
     var stopAt = c.stopAt;
     var cls = 'cs-step' + (agg === 'skip' ? ' is-skip' : '') + (agg === 'stop' ? ' is-stop' : '') +
@@ -90,17 +102,19 @@
     var h = '<li class="' + cls + '" data-step="' + esc(s.key) + '" aria-labelledby="' + tid + '">' +
       '<span class="cs-node">' + FV.h.img(s.icon || ('step-' + s.key), 32) + '</span><div class="cs-sb">' +
       '<span class="cs-num" aria-hidden="true">' + esc(FV.W('step.label', { n: i + 1 })) + '</span>' +
-      '<h3 class="cs-title" id="' + tid + '"><span class="sr-only">' + esc(FV.W('step.label', { n: i + 1 })) + ': </span>' + esc(C.stepTitle(s.key)) + '</h3>' +
+      '<h3 class="cs-title" id="' + tid + '"><span class="sr-only">' + esc(FV.W('step.label', { n: i + 1 })) + ': </span>' + esc(C.stepTitle(s.key, c, s, st, ctx)) + '</h3>' +
       tagHtml(tag, 'cs-stag');
     if (trial) return h + resultHtml(st, c, ctx) + '</div></li>';
-    h += '<p class="cs-head">' + esc(C.stepHead(st, c, s, ctx)) + '</p>';
+    var head = C.stepHead(st, c, s, ctx);
+    h += '<p class="cs-head">' + esc(head) + '</p>';
     var lines = C.stepLines(st, c, s, ctx);
     if (LISTED[s.key] && lines.length) {
       h += '<ul class="cs-lines">' + lines.map(function (l) { return lineHtml(l, c); }).join('') + '</ul>';
     } else if (lines.length) {
       // One-rule steps: the tag already sits on the step, so show only the line's own sentence when it adds something.
       var extra = lines.filter(function (l) { return l.text && !(l.tag && l.tag.cls === 't-no' && !l.tag.note && l.kind === 'rule'); });
-      if (lines.length === 1 && extra.length) h += '<p class="cs-detail">' + esc(extra[0].text) + '</p>';
+      var detail = lines.length === 1 && extra.length ? afterHead(extra[0].text, head) : '';
+      if (detail) h += '<p class="cs-detail">' + esc(detail) + '</p>';
       else if (lines.length > 1) h += '<ul class="cs-lines">' + lines.map(function (l) { return lineHtml(l, c); }).join('') + '</ul>';
     }
     // Open the rule that stopped the search here, else the first rule that applies to this case (copy-api stepOpen).

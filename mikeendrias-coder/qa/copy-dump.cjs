@@ -95,7 +95,7 @@ function collect(opts) {
       add(S + ' question', C.question(st, ctx));
       add(S + ' note', C.caseNote(st, ctx));
       c.steps.forEach((s, i) => {
-        const tag = C.stepTag(C.stepAgg(c, s, ctx));
+        const tag = C.stepTag(C.stepAgg(c, s, ctx, st));
         add(S + ' step' + (i + 1) + ' head' + (tag ? ' [' + tag.text + (tag.note ? ' · ' + tag.note : '') + ']' : ''), C.stepHead(st, c, s, ctx));
         add(S + ' step' + (i + 1) + ' aria', C.stepAria(st, c, s, ctx));
         C.stepLines(st, c, s, ctx).forEach(l => add(S + ' step' + (i + 1) + ' line: ' + l.label + ' [' + (l.tag ? l.tag.text : '') + ']', l.text));
